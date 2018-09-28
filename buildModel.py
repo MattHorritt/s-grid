@@ -1,46 +1,57 @@
 #!/usr/bin/python
 
-import cPickle as pickle
-import os
-import goring_obf as goring
-
-goring.setPrecision32()
-extLibName=r"./hydraulics_f32.so"     # Don't change this for demo version
-
 ###############################################################################
 # CONTROL PANEL
-# Output options
 
-dtmFileName=r"GB_SE.tiff"
+# Topography
+dtmFileName=r"DTM.tiff"
+clipPolyName=None # Provide polygon to clip catchment etc
+useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access for large grids
 
-clipPolyName=None # Provide polygon to clip catchment
-
-# This can be used to replace NULLs at sea with sensible values
+# These values can be used to replace NULLs (e.g. at sea) with sensible values
 noDataValue=None
 noDataReplacement=None
 
+# Use this to add NULL cells around edge - allows water to fall out of model
+addNullEdges=True
+
+# Extent and resolution of model
+xll=395000.0    # Lower left corner
+yll=143000.
+cellSize=1000.
+xsz=125
+ysz=71
+
+# Manning's n
+nFloodplain=0.06    # Can omit this if grid data supplied
+nFloodplainFile=None # Raster file of roughness, with same size/res as DTM
+
+# Output options
 outputFile="./params.pck"
 gridFileName="grid.csv"
 
-
-# Extent and resolution of model
-xll=395000.
-yll=131000.
-cellSize=1000.
-xsz=215
-ysz=102
-
-nFloodplain=0.045 # Uniform value
-nFloodplainFile=None # Raster file of roughness, with same size/res as DTM
-
 ###############################################################################
+
+import cPickle as pickle
+import os
+import sgrid
+
+# Path to C++ library
+extLibName=r"../sgridHydraulics.so"# C++ library
+
+sgrid.setPrecision32()
 
 # Channel parameters
 channel=False
 
-arrayType=goring.getPrecision()
+arrayType=sgrid.getPrecision()
 
 cellSize=arrayType(cellSize)
+
+# If nFlodplain not defined - use default value
+if 'nFloodplain' not in locals():
+    nFloodplain=0.03
+
 nFloodplain=arrayType(nFloodplain)
 nChannel=nFloodplain
 
@@ -49,30 +60,35 @@ nChannel=nFloodplain
     cppFlowPaths,cppSum,cppCalcStorageParameters,cppLazyFlowPaths, \
     cppWlFill,cppBurnFlowPaths,cppMakeWlGrid,cppClipZero,cppDryCheckDiagnostic,
     cppScsAdditionalRunoff,cppCalcFlowEdges)=\
-    goring.loadCppLib(extLibName)
+    sgrid.loadCppLib(extLibName)
 
 
 print "Parameterising topography..."
-tmpDtmFileName=goring.uncompressGeoTiff(dtmFileName,tiled=True)
+if useTempTopoFile:
+    tmpDtmFileName=sgrid.uncompressGeoTiff(dtmFileName,tiled=True)
+else:
+    tmpDtmFileName=dtmFileName
 
 if clipPolyName is not None:
-	goring.clipRasterPoly(tmpDtmFileName,clipPolyName)
+	sgrid.clipRasterPoly(tmpDtmFileName,clipPolyName)
 
-convParX, convParY, storagePar=goring.gridFlowSetupTiled(tmpDtmFileName,\
+convParX, convParY, storagePar=sgrid.gridFlowSetupTiled(tmpDtmFileName,\
     xll, yll, cellSize, xsz, ysz, nChannel, nFloodplain, \
     nFileName=nFloodplainFile,
     ndv=noDataValue,ndr=noDataReplacement,conveyanceFunc=cppConveyanceParameters,\
     storageFunc=cppCalcStorageParameters,outputPrefix='')
 
-os.remove(tmpDtmFileName)
+if useTempTopoFile:
+    os.remove(tmpDtmFileName)
 
-storagePar[:,0,0]=-9999.
-storagePar[:,-1,0]=-9999.
-storagePar[0,:,0]=-9999.
-storagePar[-1,:,0]=-9999.
+if addNullEdges:
+    storagePar[:,0,0]=-9999.
+    storagePar[:,-1,0]=-9999.
+    storagePar[0,:,0]=-9999.
+    storagePar[-1,:,0]=-9999.
 
 if gridFileName is not None:
-     goring.writeGridCSV(xll,yll,cellSize,xsz,ysz,storagePar,gridFileName)
+     sgrid.writeGridCSV(xll,yll,cellSize,xsz,ysz,storagePar,gridFileName)
 
 file=open(outputFile,"w")
 pickle.dump((xll,yll,cellSize,xsz,ysz,convParX, convParY, storagePar),file)

@@ -1,68 +1,65 @@
 #!/usr/bin/python
 
-import cPickle as pickle
-import numpy
-import time
-import os
-from subprocess import call
-import tempfile
-
-import goring_obf as goring
-import fileIO
-
-
-nExpansionIts=None; nSmoothingIts=None; expansionSlope=None;
-goring.setPrecision32()
-
 #############################################################################
 # Control Panel
-parametersFile="params.pck"
-dtmFileName="GB_SE.tiff"
+parametersFile="params.pck" # Output from buildModel.py
 
-outputDirectory="results/" # Must have final /
-outputPrefix="100mm_12h"
+outputDirectory="results" # Folder for results
+outputPrefix="24h_100mm"  # Filename for results is based on this
 
-rainfallDuration=24. # In hours
-rainfallStart=120. # In hours
-duration=rainfallStart+rainfallDuration*3
-
+# Rainfall information and length of simulation - in hours
+rainfallDuration=24.
+rainfallStart=0.
+duration=rainfallDuration*3
 rainfallDepth=100. # In mm
-
 
 initialWlFile=None  # This can be used to specify initial water depths from a
                     # csv file output by a previos run - use None to turn off
 
-pcRunoff=35.       # Percentage runoff
-
-noDataValue=-9999
-noDataReplacement=-9999
+pcRunoff=100.       # Percentage runoff
 
 saveMax=True # Set to true to save max water levels, flows etc
-saveEnd=False # Set to true to save final water levels, flows etc
+saveEnd=True # Set to true to save final water levels, flows etc
 
-defaultDepth=1.0
-flowThreshold=10. # Use this to switch off cells with flow below this value
-
-# Flow points
-flowPointsShp='Flow BC.shp'
-flowAttr='flow'
+# Flow points - shapefile of points with flow value in flowAttr attribute
+flowPointsShp=None
+flowAttr=None
 flowMultiplier=1.0 # Easy way to adjust all values by this factor
 
 # Baseflow - useful for groundwater contributions etc
-baseFlow=0.1 # in m3/s/km2, introduced into all cells
+baseFlow=0.0 # in m3/s/km2, introduced into all cells
 
 # Water level boundary conditions
-wlShp="Water Level BC.shp" # Water level BCs in shapefile - steady state only - use None to turn off
-wlAttr='wlbc'              # Attribute holding water level
+wlShp=None # Water level BCs in shapefile - steady state only - use None to turn off
+wlAttr=None              # Attribute holding water level
 
 # Initial conditions
-initialWL=2.0   # Initial water level applied everywhere - use None to turn off
+initialWL=None   # Initial water level applied everywhere - use None to turn off
 
 initialTimeStep=30.  # Time step at start of run
 minTimeStep=30.
 maxTimeStep=3600.
 
+# See comment "Add rainfall" for where to edit rainfall/runoff code
+# See comment "Apply water level boundary" for where to edit water level boundary conditions
+# See comment "Modify flow boundary" for where to edit flow boundary conditions
+
+
 #############################################################################
+
+import cPickle as pickle
+import numpy
+import time
+import os
+
+import sgrid
+import fileIO
+
+# Path to C++ library
+extLibName=r"../sgridHydraulics.so"# C++ library
+
+
+sgrid.setPrecision32()
 
 # Channel parameters
 channel=False
@@ -77,7 +74,7 @@ if not os.path.isdir(outputDirectory):
     os.makedirs(outputDirectory)
 
 
-arrayType=goring.getPrecision()
+arrayType=sgrid.getPrecision()
 
 file=open(parametersFile)
 (xll,yll,cellSize,xsz,ysz,convParX,convParY,storagePar)=pickle.load(file)
@@ -88,7 +85,7 @@ file.close()
     cppFlowPaths,cppSum,cppCalcStorageParameters,cppLazyFlowPaths, \
     cppWlFill,cppBurnFlowPaths,cppMakeWlGrid,cppClipZero,cppDryCheckDiagnostic,
     cppScsAdditionalRunoff,cppCalcFlowEdges)=\
-    goring.loadCppLib("./hydraulics_f32.so")
+    sgrid.loadCppLib(extLibName)
 
 nNonNullCells=(storagePar[:,:,0]!=-9999.).sum()
 
@@ -115,7 +112,7 @@ if wlGiven:
     for i in range(xsz):
         for j in range(ysz):
             if storagePar[i,j,0]!=-9999.:
-                volGrid[i,j]=goring.volFromWl(wlGrid[i,j],i,j,storagePar)
+                volGrid[i,j]=sgrid.volFromWl(wlGrid[i,j],i,j,storagePar,cellSize)
 
 maxVolGrid=numpy.zeros((xsz,ysz),dtype=arrayType)
 
@@ -211,7 +208,7 @@ t1=time.time()
 
 while currentTime<(duration*3600.):
 
-    timeStep=goring.calcTimeStep(wlGrid,storagePar[:,:,0],cellSize)
+    timeStep=sgrid.calcTimeStep(wlGrid,storagePar[:,:,0],cellSize)
 
     if numpy.isnan(timeStep) or numpy.isinf(timeStep):
         timeStep=initialTimeStep
@@ -219,18 +216,22 @@ while currentTime<(duration*3600.):
     timeStep=min(timeStep,maxTimeStep)
 
     # Add baseflow
-    bf=baseFlow*timeStep
+    bf=baseFlow*timeStep*cellSize*cellSize/1e6
     volGrid+=bf
 
+    ############################################################################################
     # Add rainfall
+    # Edit this to add different rainfall profiles, spatial variation, runoff etc
     if currentTime>=rainfallStart*3600. and currentTime<(rainfallStart+rainfallDuration)*3600.:
-        totalRainfallSoFarGrid=rainfallDepth*(currentTime/3600.-rainfallStart)/rainfallDuration
-
+        # totalRunoffInputVolume (cumulative) used for mass balance tracking
         totalRunoffInputVolume+=runoffGrid.sum()*\
-            timeStep/(rainfallDuration*3600.)*1e6/1000.
+            timeStep/(rainfallDuration*3600.)*cellSize*cellSize/1000.
 
+        # Rainfall is added as a volume to each cell
         volGrid+=runoffGrid*timeStep/(rainfallDuration*3600.)*\
             cellSize*cellSize/1000.
+
+    ############################################################################################
 
     # Mask dry cells
     depthGrid=wlGrid-storagePar[:,:,0]
@@ -248,6 +249,11 @@ while currentTime<(duration*3600.):
     Qout=cppCalcFlowEdges(wlGrid,convParX,convParY,storagePar,cellSize,xsz,ysz,\
         flowX,flowY,dryMask)
 
+    ############################################################################################
+    # Modify flow boundary
+    # Insert code here to modify values in the flowPointsQ array to represent a flow hydrograph
+    ############################################################################################
+
 
     # Check for drying cells
     nDCI=cppDryCheck(volGrid,flowX,flowY,timeStep,xsz,ysz,\
@@ -258,18 +264,24 @@ while currentTime<(duration*3600.):
         flowPointsXi,flowPointsYi,flowPointsQ,flowPointsN)
 
     volGrid[numpy.where(storagePar[:,:,0]==-9999)]=0.
-    cppWlFromVolGrid(volGrid,wlGrid,storagePar,xsz,ysz,channel)
+    cppWlFromVolGrid(volGrid,wlGrid,storagePar,xsz,ysz,channel,cellSize)
 
-    # Modify cell values with boundary water levels
+    ############################################################################################
+    # Apply water level boundary
+    # wlPoints is list of [i,j,wl] values processed from shapefile for entering into model grid
     for wlPt in wlPoints:
-        if storagePar[wlPt[0],wlPt[1],0]==-9999:
+        if storagePar[wlPt[0],wlPt[1],0]==-9999: # This indicates NULL cell so do nothing
             continue
 
-        wlGrid[wlPt[0],wlPt[1]]=wlPt[2]
-        newV=goring.volFromWl(wlPt[2],wlPt[0],wlPt[1],storagePar)
+        wlGrid[wlPt[0],wlPt[1]]=wlPt[2] # Modify this for time varying boundary conditions
+
+        newV=sgrid.volFromWl(wlPt[2],wlPt[0],wlPt[1],storagePar,cellSize)
         Qout+=(volGrid[wlPt[0],wlPt[1]]-newV)/timeStep
 
         volGrid[wlPt[0],wlPt[1]]=newV
+    ############################################################################################
+
+
 
     Qin=sum(flowPointsQ)+baseFlow*nNonNullCells
 
@@ -293,7 +305,7 @@ while currentTime<(duration*3600.):
             projectedFinishString=' - '
 
         print "t=%s dt=%0.2f V=%e aV=%e rV=%e nDC=%i nActive=%i Qin=%0.1f Qout=%0.1f Finish=%s"\
-            %(goring.formatTime(currentTime),timeStep,volGrid.sum(),
+            %(sgrid.formatTime(currentTime),timeStep,volGrid.sum(),
               totalActiveVol,totalRunoffInputVolume,nDCI,nActiveCells,Qin,Qout,
               projectedFinishString)
 
@@ -304,7 +316,7 @@ while currentTime<(duration*3600.):
 print "Final Volume= %e"%volGrid.sum()
 
 #cppWlFromVolGrid(maxVolGrid,wlGrid,storagePar,xsz,ysz,channel)
-cppWlFromVolGrid(volGrid,wlGrid,storagePar,xsz,ysz,channel)
+cppWlFromVolGrid(volGrid,wlGrid,storagePar,xsz,ysz,channel,cellSize)
 
 
 t2=time.time()
@@ -313,51 +325,25 @@ print "Completed simulation in %0.2fs"%((t2-t1))
 ###########################################################################
 # Save results
 
-tmpFileName=tempfile._get_candidate_names().next()+'.tiff'
-
-ogrCommand=['gdal_translate']
-ogrCommand+=['-co','BIGTIFF=YES']
-ogrCommand+=['-co','TILED=YES']
-ogrCommand+=[dtmFileName]
-ogrCommand+=[tmpFileName]
-
-
-call(ogrCommand)
-
 if saveEnd:
-    print "Resampling and saving end depths/flows to file..."
+    fileIO.saveVectorCSV(flowX,flowY,xll,yll,cellSize,\
+        os.path.join(outputDirectory,outputPrefix+"_flow.csv"),thresholdVal=1e-3)
 
-    maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
-    wlGrid[maskList]=storagePar[:,:,0][maskList]
+    fileIO.saveScalarCSV(wlGrid,xll,yll,cellSize,\
+        os.path.join(outputDirectory,outputPrefix+"_wl.csv"), headerList=['WL'])
 
-    goring.saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
-                       defaultDepth,flowThreshold,channel,flowPathOutput,
-                       tmpFileName,noDataValue,noDataReplacement,
-                       outputDirectory,outputPrefix,cppResample3,cppLazyFlowPaths,
-                       extendWlGrid,cppBurnFlowPaths,cppMakeWlGrid,cppWlFill,cppClipZero)
 
 if saveMax:
-    print "Resampling and saving max depths/flows to file..."
-    cppWlFromVolGrid(maxVolGrid,wlGrid,storagePar,xsz,ysz,channel)
+    cppWlFromVolGrid(maxVolGrid,wlGrid,storagePar,xsz,ysz,channel,cellSize)
 
     maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
     wlGrid[maskList]=storagePar[:,:,0][maskList]
 
-#    f=open("/owl4/Ambiental Sgrid/Australia/PYTHON/AWS bundle/t1.pck",'w')
-#    pickle.dump((maxVolGrid,wlGrid,maxFlowX,maxFlowY,storagePar,xsz,ysz,cellSize,xll,yll,
-#                       defaultDepth,flowThreshold,channel,flowPathOutput,
-#                       tmpFileName,noDataValue,noDataReplacement,
-#                       outputDirectory,outputPrefix+'_max',
-#                       extendWlGrid),f)
-#    f.close()
+    fileIO.saveVectorCSV(maxFlowX,maxFlowY,xll,yll,cellSize,\
+        os.path.join(outputDirectory,outputPrefix+"_max_flow.csv"),thresholdVal=1e-3)
 
-    goring.saveResults(maxVolGrid,wlGrid,maxFlowX,maxFlowY,storagePar,xsz,ysz,cellSize,xll,yll,
-                       defaultDepth,flowThreshold,channel,flowPathOutput,
-                       tmpFileName,noDataValue,noDataReplacement,
-                       outputDirectory,outputPrefix+'_max',cppResample3,cppLazyFlowPaths,
-                       extendWlGrid,cppBurnFlowPaths,cppMakeWlGrid,cppWlFill,cppClipZero)
-
-os.remove(tmpFileName)
+    fileIO.saveScalarCSV(wlGrid,xll,yll,cellSize,\
+        os.path.join(outputDirectory,outputPrefix+"_max_wl.csv"), headerList=['WL'])
 
 t2=time.time()
 
