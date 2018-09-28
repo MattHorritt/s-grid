@@ -223,8 +223,41 @@ def saveVectorCSV(vx,vy,xll,yll,dx,fileName, thresholdVal=None):
 
     f.close()
 
-def readCSV(fileName,columnHeader,xsz,ysz):
-    retArr=numpy.zeros((xsz,ysz))
+
+def readFlowCsv(fileName,xsz,ysz,dataType=numpy.float64):
+
+    retArrX=numpy.zeros((xsz+1,ysz),dtype=dataType)
+    retArrY=numpy.zeros((xsz,ysz+1),dtype=dataType)
+
+    csvFile=open(fileName)
+
+    csvReader=csv.reader(csvFile)
+
+    headerRow=csvReader.next()
+    magIdx=headerRow.index("Val")
+    dirIdx=headerRow.index("Dir")
+
+    for row in csvReader:
+        i=int(row[0])
+        j=int(row[1])
+
+        mag=float(row[magIdx])
+        dir=float(row[dirIdx])
+
+        if dir==0.0: # North
+            retArrY[i,j]=mag
+        elif dir==180.0: # South
+            retArrY[i,j]=-mag
+        if dir==90.0: # East
+            retArrX[i,j]=mag
+        if dir==270.0: # West
+            retArrX[i,j]=-mag
+
+    return retArrX, retArrY
+
+
+def readCSV(fileName,columnHeader,xsz,ysz,dataType=numpy.float64):
+    retArr=numpy.zeros((xsz,ysz),dtype=dataType)
 
     csvFile=open(fileName)
 
