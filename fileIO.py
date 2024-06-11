@@ -3,6 +3,8 @@ from osgeo import ogr
 import numpy
 import csv
 
+gdal.UseExceptions()
+
 def readPolylineShapefile(fileName):
     dataSource=ogr.Open(fileName)
     if dataSource is None:

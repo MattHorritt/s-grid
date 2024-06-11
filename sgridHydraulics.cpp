@@ -45,9 +45,9 @@ extern "C" void checkLicence()
     struct tm tm = {0};
 
 
-    tm.tm_year=2019-1900;
-    tm.tm_mon=9;
-    tm.tm_mday=28;
+    tm.tm_year=2024-1900;
+    tm.tm_mon=12;
+    tm.tm_mday=31;
 
     time_t timeExpire=mktime(&tm);
 
@@ -72,9 +72,9 @@ inline void timeBomb()
     struct tm tm = {0};
 
 
-    tm.tm_year=2019-1900;
-    tm.tm_mon=9;
-    tm.tm_mday=28;
+    tm.tm_year=2024-1900;
+    tm.tm_mon=12;
+    tm.tm_mday=31;
 
     time_t timeExpire=mktime(&tm);
 
@@ -1234,6 +1234,8 @@ float interp4(float x,float x1,float x2,float x3,float x4,
 	if(x>x1 and x<=x2) return(y1+(y2-y1)*(x-x1)/(x2-x1));
 	if(x>x2 and x<=x3) return(y2+(y3-y2)*(x-x2)/(x3-x2));
 	if(x>x3 and x<=x4) return(y3+(y4-y3)*(x-x3)/(x4-x3));
+
+	return -9999;
 }
 
 float interp5(float x,float x1,float x2,float x3,float x4, float x5,
@@ -1246,6 +1248,8 @@ float interp5(float x,float x1,float x2,float x3,float x4, float x5,
 	if(x>x2 and x<=x3) return(y2+(y3-y2)*(x-x2)/(x3-x2));
 	if(x>x3 and x<=x4) return(y3+(y4-y3)*(x-x3)/(x4-x3));
 	if(x>x4 and x<=x5) return(y4+(y5-y4)*(x-x4)/(x5-x4));
+
+	return -9999;
 }
 
 float wlFromVol4(float v,float zMin, float zMax, float vip1, float vip2, float vip3, float dx)

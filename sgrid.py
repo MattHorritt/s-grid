@@ -3,12 +3,9 @@ import numpy
 from bresenhamalgorithm import bresenham
 import scipy.stats
 import scipy.optimize
-import pylab
 import matplotlib.pyplot as plt
-import random
 import os
 import sys
-import time
 import ctypes
 from numpy.ctypeslib import ndpointer
 import tempfile
@@ -47,9 +44,9 @@ def replaceArrayVals(arr,val1,val2):
 # Use ReFH PDM model to calculate runoff (mm) in a time step
 Ct=0
 previousRainfall=0.
-rainfallProfileSummer=[0.024,0.036,0.054,0.087,0.154,0.291,0.154,0.087,0.054,\
+rainfallProfileSummer=[0.024,0.036,0.054,0.087,0.154,0.291,0.154,0.087,0.054,
     0.036,0.024]
-rainfallProfileWinter=[0.022,0.037,0.061,0.101,0.165,0.229,0.165,0.101,0.061,\
+rainfallProfileWinter=[0.022,0.037,0.061,0.101,0.165,0.229,0.165,0.101,0.061,
     0.037,0.022]
 
 def refhRunoff(t,stormDuration,rainfallDepth,bfihost,propwet,summerProfile=False):
@@ -86,8 +83,6 @@ def refhRunoff(t,stormDuration,rainfallDepth,bfihost,propwet,summerProfile=False
     totalRainfall=min(totalRainfall,rainfallDepth)
 
     additionalRainfall=totalRainfall-previousRainfall
-
-#    print "In refhRunoff: ", t, additionalRainfall, totalRainfall, previousRainfall
 
     runoff=additionalRainfall*(Ct/Cmax+0.5*additionalRainfall/Cmax)
 
@@ -236,7 +231,6 @@ def __qf(x,a,b):
 
 def quadFit(xList,yList):
     res=scipy.optimize.curve_fit(__qf, numpy.array(xList), numpy.array(yList))
-#    print res
 
     return res[0]
 
@@ -280,12 +274,9 @@ def calcStorageParametersChannel(rect,z,xll,yll,dx,cellSize,\
     else:
         drainageArea=0.
 
-#    print "Python drainage area=%f\n"%drainageArea
-#    print xi0, xi1, yi0, yi1
 
     width=chanMult*(drainageArea**chanExp)
     depth=min(width/chanAR,chanMaxD)
-#    print width, depth
 
     zBank=cell.min()
     chanVol=width*depth*cellSize # Fix this with cellSize
@@ -299,10 +290,6 @@ def calcStorageParametersChannel(rect,z,xll,yll,dx,cellSize,\
 
     zMin=min(cell)
     zMax=max(cell)
-
-#    print "zMin=", zMin
-#    print "zBank=", zBank
-#    print numChanCells
 
     trueVol=[] # Actually volume per unit area
 
@@ -332,8 +319,6 @@ def calcStorageParameters(rect,z,xll,yll,dx,plotName=None,csvOutput=None):
     yi0=int((rect[0][1]-yll)/dx)
     yi1=int((rect[1][1]-yll)/dx)
 
-#    print rect, xi0, xi1, yi0, yi1
-
     cell=z[xi0:(xi1+1),yi0:(yi1+1)]
 
     cell=cell.reshape((-1))
@@ -343,7 +328,7 @@ def calcStorageParameters(rect,z,xll,yll,dx,plotName=None,csvOutput=None):
     zMax=cell.max()
 
     if numpy.isnan(zMin) or numpy.isnan(zMax):
-        print cell
+        print(cell)
 
     trueVol=[] # Actually volume per unit area
 
@@ -417,7 +402,7 @@ def conveyanceParameters(profile,dx,n,plotName=None,csvOutput=None, nList=None):
         try:
             plt.semilogx(conveyanceList,wlList,'+',color='k')
         except:
-            print conveyanceList,wlList
+            print(conveyanceList,wlList)
             assert False
 
         conveyanceApprox=[numpy.exp(slope*km+intercept) for km in conveyanceUsingMinList]
@@ -453,7 +438,7 @@ def conveyanceParameters(profile,dx,n,plotName=None,csvOutput=None, nList=None):
         plt.xlabel('Conveyance (m3s-1)')
         plt.ylabel('WL (m)')
 
-        pylab.savefig(plotName+'.png', bbox_inches=0)
+        plt.savefig(plotName+'.png', bbox_inches=0)
         plt.close('all')
 
 
@@ -497,7 +482,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
         tickerStep=1
 
     for i in range(xsz):
-        if (ticker%tickerStep)==0: print "%i%% ..."%(100.*ticker/xsz),
+        if (ticker%tickerStep)==0: print("%i%% ..."%(100.*ticker/xsz), end='')
         sys.stdout.flush()
         ticker+=1
         for j in range(ysz):
@@ -566,7 +551,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
                     storagePar[i,j,:]=calcStorageParameters([(x0,y0),(x1,y1)],\
                         dtmWindow,x0,y0,dtmCellSize,plotName=plotName,csvOutput=False)
 
-    print "Done."
+    print("Done.")
 
     fileIO.saveConveyanceParametersCSV(convParX,convParY,xll,yll,cellSize,\
         outputPrefix+"conveyanceParams.csv")
@@ -615,13 +600,11 @@ def gridFlowSetupTiled2(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
         tickerStep=1
 
     for i in range(0,xsz,stepSize):
-        print i, xsz
-        if (ticker%tickerStep)==0: print "%i%% ..."%(100.*ticker/xsz),
+        print(i, xsz)
+        if (ticker%tickerStep)==0: print("%i%% ..."%(100.*ticker/xsz),end='')
         sys.stdout.flush()
         ticker+=1
         for j in range(0,ysz,stepSize):
-
-#            print i, j
 
             # Dimensions of tile to load from file
             x0=xll+i*cellSize
@@ -655,8 +638,6 @@ def gridFlowSetupTiled2(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
                     if ii>=xsz or jj>=ysz:
                         continue
 
-#                    print i, ii, j, jj
-
                     xx0=x0+(ii-i)*cellSize
                     xx1=xx0+cellSize
                     yy0=y0+(jj-j)*cellSize
@@ -669,20 +650,6 @@ def gridFlowSetupTiled2(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
 
                     cellWindow=dtmWindow[xxi0:xxi1+1,yyi0:yyi1+1]
-
-#                    if cellWindow.min()>0:
-#                        print i, ii, j, jj
-#
-#
-#                        print xx0, xx1, yy0, yy1
-#                        print xxi0, xxi1, yyi0, yyi1
-#
-#                        print cellWindow
-#
-#                        print dtmWindow[0:30,0:30]
-#
-#                        assert False
-
 
                     cwXsz,cwYsz=cellWindow.shape
 
@@ -719,7 +686,7 @@ def gridFlowSetupTiled2(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 #                    storagePar[i,j,:]=calcStorageParameters([(xx0,yy0),(xx1,yy1)],\
 #                        cellWindow,xx0,yy0,dtmCellSize,plotName=plotName,csvOutput=False)
 
-    print "Done."
+    print("Done.")
 
     fileIO.saveConveyanceParametersCSV(convParX,convParY,xll,yll,cellSize,\
         outputPrefix+"conveyanceParams.csv")
@@ -777,9 +744,9 @@ def gridFlowSetup(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
     # Parameters for flow in x-direction
     ticker=0
-    print "Calculating X-conveyance",
+    print("Calculating X-conveyance",end='')
     for i in range(xsz+1):
-        if (ticker%int(xsz/10))==0: print ".",
+        if (ticker%int(xsz/10))==0: print(".", end='')
         ticker+=1
         for j in range(ysz):
             if i==0 or i==xsz:
@@ -852,16 +819,16 @@ def gridFlowSetup(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
                     convParX[i,j,:]=returnArray[:]
 
-    print " Done"
+    print(" Done")
 
 #    assert False
 
     # Parameters for flow in y-direction
     count=0
     ticker=0
-    print "Calculating Y-conveyance",
+    print("Calculating Y-conveyance",end='')
     for i in range(xsz):
-        if (ticker%int(xsz/10))==0: print ".",
+        if (ticker%int(xsz/10))==0: print(".",end='')
         ticker+=1
         for j in range(ysz+1):
             if j==0 or j==ysz:
@@ -940,12 +907,12 @@ def gridFlowSetup(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
                     convParY[i,j,:]=returnArray[:]
 
-    print " Done"
+    print(" Done")
 
     # Cell storage curve
     count=0
     ticker=0
-    print "Calculating storage",
+    print("Calculating storage",end='')
 
     dtmXtr=dtmXll+dtmXsz*dtmCellSize;
     dtmYtr=dtmYll+dtmYsz*dtmCellSize;
@@ -953,7 +920,7 @@ def gridFlowSetup(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     tmp7=numpy.zeros(7,dtype=arrayType)
 
     for i in range(xsz):
-        if (ticker%int(xsz/10))==0: print ".",
+        if (ticker%int(xsz/10))==0: print(".",end='')
         ticker+=1
         for j in range(ysz):
             x0=xll+i*cellSize
@@ -995,7 +962,7 @@ def gridFlowSetup(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
                     storagePar[i,j,:]=calcStorageParameters([(x0,y0),(x1,y1)],\
                         dtm,dtmXll,dtmYll,dtmCellSize,plotName=plotName,csvOutput=False)
 
-    print "Done."
+    print("Done.")
 
     fileIO.saveConveyanceParametersCSV(convParX,convParY,xll,yll,cellSize,\
         outputPrefix+"conveyanceParams.csv")
@@ -1026,7 +993,7 @@ def dryCheck(v,Qx,Qy,sp,dt,verbose=False,sources=None):
     for i in range(maxIt):
         nc=__dc(v,Qx,Qy,sp,dt,verbose,sources)
         if verbose:
-            print "In dryCheck, number of flows changed=", nc
+            print("In dryCheck, number of flows changed=", nc)
         if nc==0: break
 
     return i+1
@@ -1083,10 +1050,10 @@ def __dc(v,Qx,Qy,sp,dt,verbose=False,sources=None):
                     vNew=v[i,j]+dt*(Q1+Q2+Q3+Q4)
 
                     if vNew<-1:
-                        print "vNew=",vNew
-                        print i,j, alpha, v[i,j]
-                        print Q1t, Q2t, Q3t, Q4t
-                        print Q1*dt,Q2*dt,Q3*dt,Q4*dt
+                        print("vNew=",vNew)
+                        print(i,j, alpha, v[i,j])
+                        print(Q1t, Q2t, Q3t, Q4t)
+                        print(Q1*dt,Q2*dt,Q3*dt,Q4*dt)
 
 
     if sources is not None: # Removing these now
@@ -1264,15 +1231,15 @@ def resample2(wl,v,xll,yll,dx,dtmFileName,ndv=None,ndr=None):
             try:
                 dtmWindow[:,:]=dtm[xi0:xi1,yi0:yi1]
             except:
-                print xCell1, xCell2
-                print yCell1, yCell2
-                print xi0, yi0, xi1, yi1
-                print
-                print (xCell1-dtmXll)/dtmCellSize
-                print (xCell2-dtmXll)/dtmCellSize
+                print(xCell1, xCell2)
+                print(yCell1, yCell2)
+                print(xi0, yi0, xi1, yi1)
+                print()
+                print((xCell1-dtmXll)/dtmCellSize)
+                print((xCell2-dtmXll)/dtmCellSize)
 
-                print (yCell1-dtmYll)/dtmCellSize
-                print (yCell2-dtmYll)/dtmCellSize
+                print((yCell1-dtmYll)/dtmCellSize)
+                print((yCell2-dtmYll)/dtmCellSize)
 
             depthWindow=wl[i,j]-dtmWindow
             depthWindow[numpy.where(depthWindow<0)]=-9999.
@@ -1478,9 +1445,6 @@ def __lowerChannelCells(topoProfile,dxt,width,depth,nChan,nFP):
         topoProfile[i]=minZ-depth
         nList[i]=nChan
 
-#    if width>200:
-#        print topoProfile
-
     return nList
 
 
@@ -1556,7 +1520,7 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
     for iTile in range(numTilesX):
         for jTile in range(numTilesY):
 
-            print "Processing tile %i/%i,%i/%i"%(iTile+1,numTilesX,jTile+1,numTilesY)
+            print("Processing tile %i/%i,%i/%i"%(iTile+1,numTilesX,jTile+1,numTilesY))
 
             x0=dxll+iTile*tileSize*ddx
             x1=min(x0+tileSize*ddx,x0+ddx*dtmXsz)
@@ -1589,11 +1553,9 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
             fileIO.saveScalarGrid(depthGrid,x0,y0,ddx,\
                 outputFilePathRoot+"_depth_"+tileString+".tif")
             ###################################################################
-#            print "Zeroing polys..."
-
             if zeroPolyList is not None and \
                 polyXmin<x1 and polyXmax>x0 and polyYmin<y1 and polyYmax>y0:
-                print "Zeroing polys..."
+                print("Zeroing polys...")
                 reservoirs.maskZeroPoly(tmpWktFileName,\
                     os.path.join(outputDirectory,\
                     outputPrefix+"_depth_"+tileString+".tif"))
@@ -1661,7 +1623,7 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
 
 
     # Build VRTs for grid outputs
-    print "Generating VRTs...",
+    print("Generating VRTs...",)
 
     # Depths
     vrtCommand=['gdalbuildvrt']
@@ -1729,7 +1691,7 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
 
         call(vrtCommand)
 
-    print "done."
+    print("done.")
 
     if saveCsv:
         fileIO.saveVectorCSV(flowX,flowY,xll,yll,cellSize,\

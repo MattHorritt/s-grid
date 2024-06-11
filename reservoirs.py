@@ -18,7 +18,7 @@ def fillEdgeCells(cellDict,wl):
 ###########################################################################
 def maskZeroPoly(wktFileName,rasterFileName):
 
-    print wktFileName,rasterFileName
+    print(wktFileName,rasterFileName)
 
     gdalCmd=['gdal_rasterize']
     gdalCmd+=['-burn','0']
@@ -70,7 +70,6 @@ def calcSpills(wlGrid,spills,qX,qY):
 
             # Add spillway flow if present
             if len(spills[(i,j,dir)])>3:
-#                print spills[(i,j,dir)]
                 crestLevel=spills[(i,j,dir)][3]
                 crestLength=spills[(i,j,dir)][4]
                 weirCoeff=spills[(i,j,dir)][5]
@@ -119,7 +118,7 @@ def spillways(xll,yll,cellSize,xsz,ysz,spills,shpFileName):
 
         # If none - something wrong
         if len(edges)==0:
-            print "***** Warning - spillway at %f %f cannot be assigned to edge - ignoring ***"%(x,y)
+            print("***** Warning - spillway at %f %f cannot be assigned to edge - ignoring ***"%(x,y))
             continue
 
         # If multiple edges, use nearest
@@ -276,8 +275,6 @@ def modifyConvPar(xll,yll,cellSize,xsz,ysz,convParX,convParY,shpFileName,csvEdge
             if count>100:
                 break
 
-#            print i1, j1
-
             x0=xll+i1*cellSize
             x1=x0+cellSize
             y0=yll+j1*cellSize
@@ -296,7 +293,6 @@ def modifyConvPar(xll,yll,cellSize,xsz,ysz,convParX,convParY,shpFileName,csvEdge
                 for i in range(len(intersectionPoints)):
                     nextPoints.append(intersectionPoints[i].coords[0])
 
-#                print nextPoints
                 for nx,ny in nextPoints:
                     if (nx,ny) not in pointList:
                         pointList.append((nx,ny))
@@ -430,7 +426,6 @@ def modifyConvPar(xll,yll,cellSize,xsz,ysz,convParX,convParY,shpFileName,csvEdge
         # Link gaps in edge list
         for i, edge in enumerate(edgeList[:-1]):
             if edge[2]!=edgeList[i+1][0] or edge[3]!=edgeList[i+1][1]:
-#                print "Adding new edge..."
                 edgeList.append([edge[2],edge[3],edgeList[i+1][0],edgeList[i+1][1]])
                 addEdgeArray(edgeArrX,edgeArrY,crestLengthX,crestLengthY,edgeList[-1],xll,yll,cellSize)
 
@@ -517,7 +512,7 @@ def modifyConvPar(xll,yll,cellSize,xsz,ysz,convParX,convParY,shpFileName,csvEdge
 #    assert False
 ###############################################################################
 
-    print "Total polyline length=",totalPolylineLength
-    print "Total crest length added=",totalCrestLength
+    print("Total polyline length=",totalPolylineLength)
+    print("Total crest length added=",totalCrestLength)
 
     return crestSpillList, fillCellDict, zeroPolyList

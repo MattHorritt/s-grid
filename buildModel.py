@@ -4,7 +4,7 @@
 # CONTROL PANEL
 
 # Topography
-dtmFileName=r"DTM.tiff"
+dtmFileName=r"Test 1 - Planar slope/dtm.tiff"
 clipPolyName=None # Provide polygon to clip catchment etc
 useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access for large grids
 
@@ -13,14 +13,14 @@ noDataValue=None
 noDataReplacement=None
 
 # Use this to add NULL cells around edge - allows water to fall out of model
-addNullEdges=True
+addNullEdges=False
 
 # Extent and resolution of model
-xll=395000.0    # Lower left corner
-yll=143000.
+xll=0.0    # Lower left corner
+yll=0.0
 cellSize=1000.
-xsz=125
-ysz=71
+xsz=100
+ysz=10
 
 # Manning's n
 nFloodplain=0.06    # Can omit this if grid data supplied
@@ -32,12 +32,12 @@ gridFileName="grid.csv"
 
 ###############################################################################
 
-import cPickle as pickle
+import pickle
 import os
 import sgrid
 
 # Path to C++ library
-extLibName=r"../sgridHydraulics.so"# C++ library
+extLibName=r"./sgridHydraulics.so"# C++ library
 
 sgrid.setPrecision32()
 
@@ -59,11 +59,11 @@ nChannel=nFloodplain
     cppConveyanceParameters,cppMaxVolGrid,cppResample2,cppResample3, \
     cppFlowPaths,cppSum,cppCalcStorageParameters,cppLazyFlowPaths, \
     cppWlFill,cppBurnFlowPaths,cppMakeWlGrid,cppClipZero,cppDryCheckDiagnostic,
-    cppScsAdditionalRunoff,cppCalcFlowEdges)=\
+    cppScsAdditionalRunoff,cppCalcFlowEdges,cppCheckLicence)=\
     sgrid.loadCppLib(extLibName)
 
 
-print "Parameterising topography..."
+print("Parameterising topography...")
 if useTempTopoFile:
     tmpDtmFileName=sgrid.uncompressGeoTiff(dtmFileName,tiled=True)
 else:
@@ -90,6 +90,6 @@ if addNullEdges:
 if gridFileName is not None:
      sgrid.writeGridCSV(xll,yll,cellSize,xsz,ysz,storagePar,gridFileName)
 
-file=open(outputFile,"w")
-pickle.dump((xll,yll,cellSize,xsz,ysz,convParX, convParY, storagePar),file)
+file=open(outputFile,"wb")
+pickle.dump((xll, yll, cellSize, xsz, ysz, convParX, convParY, storagePar), file)
 file.close()
