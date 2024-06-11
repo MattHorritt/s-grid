@@ -2,8 +2,11 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy
 import csv
+import os
 
-gdal.UseExceptions()
+# Hack to avoid proj issue throwing exception
+gdal.DontUseExceptions()
+os.environ['PROJ_LIB'] = '/home/mattyh/miniconda3/envs/sgrid/share/proj'
 
 def readPolylineShapefile(fileName):
     dataSource=ogr.Open(fileName)
@@ -18,6 +21,7 @@ def readPolylineShapefile(fileName):
 
     rds=[]
 
+    layer.ResetReading()
     feature=layer.GetNextFeature()
 
     while feature is not None:
@@ -54,8 +58,12 @@ def readPointShapefile(fileName):
 
     rds=[]
 
-    pointFeature=pointsLayer.GetNextFeature()
-    while pointFeature is not None:
+    # featureCount = pointsLayer.GetFeatureCount()
+    # pointsLayer.ResetReading()
+
+    for pointFeature in pointsLayer:
+        # pointFeature = pointsLayer.GetFeature(fi)
+
         X=pointFeature.geometry().GetPoint()[0]
         Y=pointFeature.geometry().GetPoint()[1]
 
@@ -66,7 +74,7 @@ def readPointShapefile(fileName):
 
         rds.append((X,Y,tmpDict))
 
-        pointFeature=pointsLayer.GetNextFeature()
+        # pointFeature=pointsLayer.GetNextFeature()
 
     return rds
 

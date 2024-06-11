@@ -1773,4 +1773,7 @@ def calcTimeStep(wlGrid,zGrid,dx):
     depth=wlGrid-zGrid
     depth[numpy.where(zGrid==-9999)]=0.
 
-    return 0.7*dx/numpy.sqrt(9.81*depth.max())
+    if depth.max() > 0:
+        return 0.7*dx/numpy.sqrt(9.81*depth.max())
+    else: # Assume depth = 1 if no depth yet
+        return 0.7*dx/numpy.sqrt(9.81)

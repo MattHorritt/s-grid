@@ -5,33 +5,35 @@
 parametersFile="params.pck" # Output from buildModel.py
 
 outputDirectory="results" # Folder for results
-outputPrefix="24h_100mm"  # Filename for results is based on this
+outputPrefix="output"  # Filename for results is based on this
 
 # Rainfall information and length of simulation - in hours
-rainfallDuration=24.
+rainfallDuration=0.
 rainfallStart=0.
-duration=rainfallDuration*3
-rainfallDepth=100. # In mm
+duration=120
+rainfallDepth=0. # In mm
 
 initialWlFile=None  # This can be used to specify initial water depths from a
                     # csv file output by a previos run - use None to turn off
+
+initialWL = 2.0
 
 pcRunoff=100.       # Percentage runoff
 
 saveMax=True # Set to true to save max water levels, flows etc
 saveEnd=True # Set to true to save final water levels, flows etc
 
+# Water level boundary conditions
+wlShp="Test 1 - Planar slope/wlBCs.shp" # Water level BCs in shapefile - steady state only - use None to turn off
+wlAttr='wl'              # Attribute holding water level
+
 # Flow points - shapefile of points with flow value in flowAttr attribute
-flowPointsShp=None
-flowAttr=None
+flowPointsShp='Test 1 - Planar slope/flowBCs.shp'
+flowAttr='flow'
 flowMultiplier=1.0 # Easy way to adjust all values by this factor
 
 # Baseflow - useful for groundwater contributions etc
 baseFlow=0.0 # in m3/s/km2, introduced into all cells
-
-# Water level boundary conditions
-wlShp=None # Water level BCs in shapefile - steady state only - use None to turn off
-wlAttr=None              # Attribute holding water level
 
 # Initial conditions
 initialWL=None   # Initial water level applied everywhere - use None to turn off
@@ -47,7 +49,7 @@ maxTimeStep=3600.
 
 #############################################################################
 
-import cPickle as pickle
+import pickle
 import numpy
 import time
 import os
@@ -56,7 +58,7 @@ import sgrid
 import fileIO
 
 # Path to C++ library
-extLibName=r"../sgridHydraulics.so"# C++ library
+extLibName=r"./sgridHydraulics.so"# C++ library
 
 
 sgrid.setPrecision32()
@@ -76,7 +78,7 @@ if not os.path.isdir(outputDirectory):
 
 arrayType=sgrid.getPrecision()
 
-file=open(parametersFile)
+file=open(parametersFile, 'rb')
 (xll,yll,cellSize,xsz,ysz,convParX,convParY,storagePar)=pickle.load(file)
 file.close()
 
@@ -84,7 +86,7 @@ file.close()
     cppConveyanceParameters,cppMaxVolGrid,cppResample2,cppResample3, \
     cppFlowPaths,cppSum,cppCalcStorageParameters,cppLazyFlowPaths, \
     cppWlFill,cppBurnFlowPaths,cppMakeWlGrid,cppClipZero,cppDryCheckDiagnostic,
-    cppScsAdditionalRunoff,cppCalcFlowEdges)=\
+    cppScsAdditionalRunoff,cppCalcFlowEdges,cppLicenceCheck)=\
     sgrid.loadCppLib(extLibName)
 
 nNonNullCells=(storagePar[:,:,0]!=-9999.).sum()
@@ -124,7 +126,7 @@ maxFlowY=numpy.zeros((xsz,ysz+1),dtype=arrayType)
 dryMask=numpy.zeros((xsz,ysz),dtype=arrayType)+1
 dryThresh=0.1
 
-print "Initial Volume=%e"%volGrid.sum()
+print("Initial Volume=%e"%volGrid.sum())
 
 # Read sources and process
 if flowPointsShp is not None:
@@ -184,8 +186,6 @@ if wlShp is not None:
 
                 xi=int((x-xll)/cellSize)
                 yi=int((y-yll)/cellSize)
-
-#                print (xi,yi,wl)
 
                 if xi>=0 and xi<xsz and yi>=0 and yi<ysz:
                     if (xi,yi,wl) not in wlPoints:
@@ -304,23 +304,23 @@ while currentTime<(duration*3600.):
         else:
             projectedFinishString=' - '
 
-        print "t=%s dt=%0.2f V=%e aV=%e rV=%e nDC=%i nActive=%i Qin=%0.1f Qout=%0.1f Finish=%s"\
+        print("t=%s dt=%0.2f V=%e aV=%e rV=%e nDC=%i nActive=%i Qin=%0.1f Qout=%0.1f Finish=%s"\
             %(sgrid.formatTime(currentTime),timeStep,volGrid.sum(),
               totalActiveVol,totalRunoffInputVolume,nDCI,nActiveCells,Qin,Qout,
-              projectedFinishString)
+              projectedFinishString))
 
         nextDisplayTime+=displayInterval
 
     currentTime+=timeStep
 
-print "Final Volume= %e"%volGrid.sum()
+print("Final Volume= %e"%volGrid.sum())
 
 #cppWlFromVolGrid(maxVolGrid,wlGrid,storagePar,xsz,ysz,channel)
 cppWlFromVolGrid(volGrid,wlGrid,storagePar,xsz,ysz,channel,cellSize)
 
 
 t2=time.time()
-print "Completed simulation in %0.2fs"%((t2-t1))
+print("Completed simulation in %0.2fs"%((t2-t1)))
 
 ###########################################################################
 # Save results
@@ -347,4 +347,4 @@ if saveMax:
 
 t2=time.time()
 
-print "Completed all in %0.2fs"%((t2-t1))
+print("Completed all in %0.2fs"%((t2-t1)))
