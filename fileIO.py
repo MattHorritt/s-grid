@@ -243,7 +243,7 @@ def readFlowCsv(fileName,xsz,ysz,dataType=numpy.float64):
 
     csvReader=csv.reader(csvFile)
 
-    headerRow=csvReader.next()
+    headerRow=next(csvReader)
     magIdx=headerRow.index("Val")
     dirIdx=headerRow.index("Dir")
 
@@ -273,7 +273,7 @@ def readCSV(fileName,columnHeader,xsz,ysz,dataType=numpy.float64):
 
     csvReader=csv.reader(csvFile)
 
-    headerRow=csvReader.next()
+    headerRow=next(csvReader)
     dataIdx=headerRow.index(columnHeader)
 
     for row in csvReader:
