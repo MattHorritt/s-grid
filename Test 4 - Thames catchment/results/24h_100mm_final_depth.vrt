@@ -1,0 +1,13 @@
+<VRTDataset rasterXSize="2519" rasterYSize="1446">
+  <GeoTransform>  3.9497500000000000e+05,  5.0000000000000000e+01,  0.0000000000000000e+00,  2.1452500000000000e+05,  0.0000000000000000e+00, -5.0000000000000000e+01</GeoTransform>
+  <VRTRasterBand dataType="Float32" band="1">
+    <ColorInterp>Gray</ColorInterp>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="1">24h_100mm_final_depth_tile0000.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="2519" RasterYSize="1446" DataType="Float32" BlockXSize="2519" BlockYSize="1" />
+      <SrcRect xOff="0" yOff="0" xSize="2519" ySize="1446" />
+      <DstRect xOff="0" yOff="0" xSize="2519" ySize="1446" />
+    </SimpleSource>
+  </VRTRasterBand>
+</VRTDataset>

@@ -1,0 +1,3 @@
+g++ -O3 -c -fPIC timeStep.cpp -o timeStep.o
+g++ -shared -Wl,-soname,timeStep.o -o timeStep.so timeStep.o
+

@@ -1,0 +1,9 @@
+24h_100mm	0.888711	0.000124	0.001667	/owl3/S-Grid/Development/Test 4 - Thames catchment/Pyflood/runRainfallDuration.py	395000	520000	143000	214000	24	100	24h_100mm	diagnostic.txt
+1h_20mm	168.651341	0.000001	0.166667	/owl3/S-Grid/Development/Test 4 - Thames catchment/Pyflood/runRainfallDuration.py	395000	520000	143000	214000	1	20	1h_20mm	diagnostic.txt
+1h_20mm	159.633527	0.000034	0.166667	/owl3/S-Grid/Development/Test 4 - Thames catchment/Pyflood/runRainfallDuration.py	395000	520000	143000	214000	1	20	1h_20mm	diagnostic.txt
+1h_20mm	15.447585	-99.241274	0.166667	/owl3/S-Grid/Development/Test 4 - Thames catchment/Pyflood/runRainfallDuration.py	395000	520000	143000	214000	1	20	1h_20mm	diagnostic.txt
+1h_20mm	225.818230	-99.667753	1.000000	/owl3/S-Grid/Development/Test 4 - Thames catchment/Pyflood/runRainfallDuration.py	395000	520000	143000	214000	1	20	1h_20mm	diagnostic.txt
+1h_20mm	229.275446	-95.216721	1.000000	/owl3/S-Grid/Development/Test 4 - Thames catchment/Pyflood/runRainfallDuration.py	395000	520000	143000	214000	1	20	1h_20mm	diagnostic.txt
+1h_20mm	227.707469	0.004196	1.000000	/owl3/S-Grid/Development/Test 4 - Thames catchment/Pyflood/runRainfallDuration.py	395000	520000	143000	214000	1	20	1h_20mm	diagnostic.txt
+24h_100mm	127.796507	0.013522	1.000000	/owl3/S-Grid/Development/Test 4 - Thames catchment/Pyflood/runRainfallDuration.py	395000	520000	143000	214000	24	100	24h_100mm	diagnostic.txt
+24h_100mm	26122.629957	0.001518	72.000000	/owl3/S-Grid/Development/Test 4 - Thames catchment/Pyflood/runRainfallDuration.py	395000	520000	143000	214000	24	100	24h_100mm	diagnostic.txt

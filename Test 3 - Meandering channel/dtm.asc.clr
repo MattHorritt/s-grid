@@ -1,0 +1,260 @@
+<?xml version="1.0"?>
+<ISISMapperColourRamp>
+  <LastModified>21/09/2018 00:00:00</LastModified>
+  <FormatVersion>3.0</FormatVersion>
+  <Type>Colour_Ramp_Classify</Type>
+  <file_attribs>[V1]|2662448|20/09/2018 12:27:38</file_attribs>
+  <ClassificationFieldID>0</ClassificationFieldID>
+  <ClassificationField>...</ClassificationField>
+  <ColourSchema>
+    <Type>Raster</Type>
+    <LayerZmin>-4.98</LayerZmin>
+    <LayerZmax>10</LayerZmax>
+    <MinimumValue>-4.98</MinimumValue>
+    <MaximumValue>10</MaximumValue>
+    <Style>Colour_Ramp_Classify</Style>
+    <Single>True</Single>
+    <NumberOfColorSets>20</NumberOfColorSets>
+    <UseTransparentNoDataColour>True</UseTransparentNoDataColour>
+    <NoDataColour>Color_ARGB:0:0:0:0</NoDataColour>
+    <NoDataValue>0</NoDataValue>
+    <ColourSets>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:51:204:204</Colour>
+        <LowestValue>-4.98</LowestValue>
+        <HighestValue>-4.231</HighestValue>
+        <Description>-4.98 : -4.231</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:49:194:201</Colour>
+        <LowestValue>-4.231</LowestValue>
+        <HighestValue>-3.482</HighestValue>
+        <Description>-4.231 : -3.482</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:47:184:198</Colour>
+        <LowestValue>-3.482</LowestValue>
+        <HighestValue>-2.733</HighestValue>
+        <Description>-3.482 : -2.733</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:45:174:195</Colour>
+        <LowestValue>-2.733</LowestValue>
+        <HighestValue>-1.984</HighestValue>
+        <Description>-2.733 : -1.984</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:43:164:192</Colour>
+        <LowestValue>-1.984</LowestValue>
+        <HighestValue>-1.235</HighestValue>
+        <Description>-1.984 : -1.235</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:41:154:189</Colour>
+        <LowestValue>-1.235</LowestValue>
+        <HighestValue>-0.486</HighestValue>
+        <Description>-1.235 : -0.486</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:39:144:186</Colour>
+        <LowestValue>-0.486</LowestValue>
+        <HighestValue>0.263</HighestValue>
+        <Description>-0.486 : 0.263</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:37:134:183</Colour>
+        <LowestValue>0.263</LowestValue>
+        <HighestValue>1.012</HighestValue>
+        <Description>0.263 : 1.012</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:35:124:180</Colour>
+        <LowestValue>1.012</LowestValue>
+        <HighestValue>1.761</HighestValue>
+        <Description>1.012 : 1.761</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:33:114:177</Colour>
+        <LowestValue>1.761</LowestValue>
+        <HighestValue>2.51</HighestValue>
+        <Description>1.761 : 2.51</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:31:104:174</Colour>
+        <LowestValue>2.51</LowestValue>
+        <HighestValue>3.259</HighestValue>
+        <Description>2.51 : 3.259</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:29:94:171</Colour>
+        <LowestValue>3.259</LowestValue>
+        <HighestValue>4.008</HighestValue>
+        <Description>3.259 : 4.008</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:27:84:168</Colour>
+        <LowestValue>4.008</LowestValue>
+        <HighestValue>4.757</HighestValue>
+        <Description>4.008 : 4.757</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:25:74:165</Colour>
+        <LowestValue>4.757</LowestValue>
+        <HighestValue>5.506</HighestValue>
+        <Description>4.757 : 5.506</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:23:64:162</Colour>
+        <LowestValue>5.506</LowestValue>
+        <HighestValue>6.255</HighestValue>
+        <Description>5.506 : 6.255</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:21:54:159</Colour>
+        <LowestValue>6.255</LowestValue>
+        <HighestValue>7.004</HighestValue>
+        <Description>6.255 : 7.004</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:19:44:156</Colour>
+        <LowestValue>7.004</LowestValue>
+        <HighestValue>7.753</HighestValue>
+        <Description>7.004 : 7.753</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:17:34:153</Colour>
+        <LowestValue>7.753</LowestValue>
+        <HighestValue>8.502</HighestValue>
+        <Description>7.753 : 8.502</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:15:24:150</Colour>
+        <LowestValue>8.502</LowestValue>
+        <HighestValue>9.251</HighestValue>
+        <Description>8.502 : 9.251</Description>
+      </ColourSet>
+      <ColourSet>
+        <Name />
+        <Visible>True</Visible>
+        <Colour>Color_ARGB:255:0:0:128</Colour>
+        <LowestValue>9.251</LowestValue>
+        <HighestValue>10</HighestValue>
+        <Description>9.251 : 10</Description>
+      </ColourSet>
+    </ColourSets>
+    <StyleSet>
+      <DefaultStyle>
+        <HillShading>CH.Water.SDK.IMColourEditor.RasterHillShading</HillShading>
+        <MeshOn>False</MeshOn>
+        <GrayFilterOn>False</GrayFilterOn>
+        <StyleType>Raster</StyleType>
+        <Transparency>255</Transparency>
+      </DefaultStyle>
+      <RasterHillShading>
+        <HillShading>False</HillShading>
+        <ZFactor>10</ZFactor>
+        <Azimuth>175</Azimuth>
+        <Altitude>15</Altitude>
+        <Brightness>0.9</Brightness>
+      </RasterHillShading>
+    </StyleSet>
+  </ColourSchema>
+  <Labels>
+    <LabelSet>
+      <LabelPositioningAtShape>lpCenter</LabelPositioningAtShape>
+      <FieldID>0</FieldID>
+      <RotationFieldID />
+      <Visible>False</Visible>
+      <AvoidCollisions>True</AvoidCollisions>
+      <DynamicVisiblity>False</DynamicVisiblity>
+      <RemoveDuplicates>False</RemoveDuplicates>
+      <ScaleLabels>False</ScaleLabels>
+      <UseWidthLimits>False</UseWidthLimits>
+      <MinVisibleScale>0</MinVisibleScale>
+      <MaxVisibleScale>100000000</MaxVisibleScale>
+      <MinDrawingSize>1</MinDrawingSize>
+      <LabelOptions>
+        <Priority>0</Priority>
+        <Name />
+        <Expression />
+        <Visible>True</Visible>
+        <OffsetX>0</OffsetX>
+        <OffsetY>0</OffsetY>
+        <Alignment>laCenter</Alignment>
+        <LineOrientation>lorParallel</LineOrientation>
+        <FontName>Arial</FontName>
+        <FontSize>12</FontSize>
+        <FontItalic>False</FontItalic>
+        <FontBold>False</FontBold>
+        <FontUnderline>False</FontUnderline>
+        <FontStrikeOut>False</FontStrikeOut>
+        <FontColor>8388608</FontColor>
+        <FontColor2>8388608</FontColor2>
+        <FontGradientMode>gmNone</FontGradientMode>
+        <FontTransparency>255</FontTransparency>
+        <FontOutlineVisible>False</FontOutlineVisible>
+        <ShadowVisible>False</ShadowVisible>
+        <HaloVisible>False</HaloVisible>
+        <FontOutlineColor>255</FontOutlineColor>
+        <ShadowColor>16777215</ShadowColor>
+        <HaloColor>11823615</HaloColor>
+        <FontOutlineWidth>1</FontOutlineWidth>
+        <ShadowOffsetX>2</ShadowOffsetX>
+        <ShadowOffsetY>2</ShadowOffsetY>
+        <HaloSize>1</HaloSize>
+        <FrameType>lfRectangle</FrameType>
+        <FrameOutlineColor>9868950</FrameOutlineColor>
+        <FrameBackColor>14745599</FrameBackColor>
+        <FrameBackColor2>15130800</FrameBackColor2>
+        <FrameGradientMode>gmNone</FrameGradientMode>
+        <FrameOutlineStyle>dsSolid</FrameOutlineStyle>
+        <FrameOutlineWidth>1</FrameOutlineWidth>
+        <FramePaddingX>10</FramePaddingX>
+        <FramePaddingY>0</FramePaddingY>
+        <FrameTransparency>255</FrameTransparency>
+        <InboxAlignment>laCenter</InboxAlignment>
+        <FrameVisible>False</FrameVisible>
+        <Enabled>True</Enabled>
+        <FontSize2>14</FontSize2>
+      </LabelOptions>
+    </LabelSet>
+  </Labels>
+</ISISMapperColourRamp>

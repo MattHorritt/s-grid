@@ -1,0 +1,99 @@
+# -*- coding: utf-8 -*-
+
+#############################################################################
+# Control Panel
+parametersFile="params.pck"
+
+dtmFileName=r"DTM_Smooth.tiff"
+useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access
+
+noDataValue=None
+noDataReplacement=None
+
+resultsDirectory="results"
+resultsPrefix="24h_100mm"
+
+processMax=True # Set to true to save max water levels, flows etc
+processEnd=True # Set to true to save final water levels, flows etc
+
+defaultDepth=1.0
+flowThreshold=10. # Use this to switch off cells with flow below this value
+
+###########################################################################
+
+import os
+import pickle
+import numpy
+
+import fileIO
+import sgrid
+
+# Path to C++ library
+extLibName=r"../sgridHydraulics.so"# C++ library
+
+sgrid.setPrecision32()
+
+file=open(parametersFile, 'rb')
+(xll,yll,cellSize,xsz,ysz,convParX,convParY,storagePar)=pickle.load(file)
+file.close()
+
+(cppCalcFlow,cppCalcFlowGrid,cppDryCheck,cppTimeStep,cppWlFromVolGrid,\
+    cppConveyanceParameters,cppMaxVolGrid,cppResample2,cppResample3, \
+    cppFlowPaths,cppSum,cppCalcStorageParameters,cppLazyFlowPaths, \
+    cppWlFill,cppBurnFlowPaths,cppMakeWlGrid,cppClipZero,cppDryCheckDiagnostic,
+    cppScsAdditionalRunoff,cppCalcFlowEdges,cppCheckLicence)=\
+    sgrid.loadCppLib(extLibName)
+
+if useTempTopoFile:
+    tmpDtmFileName=sgrid.uncompressGeoTiff(dtmFileName,tiled=True)
+else:
+    tmpDtmFileName=dtmFileName
+
+dryThresh=0.1
+channel=False
+
+flowPathOutput="new"
+extendWlGrid=False
+
+if processEnd:
+    wlFileName=os.path.join(resultsDirectory,resultsPrefix+'_wl.csv')
+    flowFileName=os.path.join(resultsDirectory,resultsPrefix+'_flow.csv')
+
+    wlGrid=fileIO.readCSV(wlFileName,"WL",xsz,ysz,dataType=sgrid.getPrecision())
+    flowX,flowY=fileIO.readFlowCsv(flowFileName,xsz,ysz,dataType=sgrid.getPrecision())
+
+    print("Resampling and saving end depths/flows to file...")
+
+    maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
+    wlGrid[maskList]=storagePar[:,:,0][maskList]
+
+    sgrid.saveResults(wlGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
+                       defaultDepth,flowThreshold,channel,flowPathOutput,
+                       tmpDtmFileName,noDataValue,noDataReplacement,
+                       resultsDirectory,resultsPrefix+'_final',cppResample3,cppLazyFlowPaths,
+                       extendWlGrid,cppBurnFlowPaths,cppMakeWlGrid,cppWlFill,cppClipZero,
+                       saveCsv=False)
+
+if processMax:
+    wlFileName=os.path.join(resultsDirectory,resultsPrefix+'_max_wl.csv')
+    flowFileName=os.path.join(resultsDirectory,resultsPrefix+'_max_flow.csv')
+
+    wlGrid=fileIO.readCSV(wlFileName,"WL",xsz,ysz,dataType=sgrid.getPrecision())
+    flowX,flowY=fileIO.readFlowCsv(flowFileName,xsz,ysz,dataType=sgrid.getPrecision())
+
+    print("Resampling and saving max depths/flows to file...")
+
+    maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
+    wlGrid[maskList]=storagePar[:,:,0][maskList]
+
+    sgrid.saveResults(wlGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
+                       defaultDepth,flowThreshold,channel,flowPathOutput,
+                       tmpDtmFileName,noDataValue,noDataReplacement,
+                       resultsDirectory,resultsPrefix+'_max',cppResample3,cppLazyFlowPaths,
+                       extendWlGrid,cppBurnFlowPaths,cppMakeWlGrid,cppWlFill,cppClipZero,
+                       saveCsv=False)
+
+if useTempTopoFile:
+    os.remove(tmpDtmFileName)
+
+

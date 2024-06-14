@@ -1,0 +1,19 @@
+<VRTDataset rasterXSize="500" rasterYSize="250">
+  <GeoTransform>  0.0000000000000000e+00,  2.0000000000000000e+01,  0.0000000000000000e+00,  5.0000000000000000e+03,  0.0000000000000000e+00, -2.0000000000000000e+01</GeoTransform>
+  <VRTRasterBand dataType="Float32" band="1">
+    <Metadata>
+      <MDI key="STATISTICS_MAXIMUM">6.4800329208374</MDI>
+      <MDI key="STATISTICS_MEAN">0.35745620620632</MDI>
+      <MDI key="STATISTICS_MINIMUM">0</MDI>
+      <MDI key="STATISTICS_STDDEV">1.0207444729308</MDI>
+    </Metadata>
+    <ColorInterp>Gray</ColorInterp>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="1">Q1000_final_depth_tile0000.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="500" RasterYSize="250" DataType="Float32" BlockXSize="500" BlockYSize="4" />
+      <SrcRect xOff="0" yOff="0" xSize="500" ySize="250" />
+      <DstRect xOff="0" yOff="0" xSize="500" ySize="250" />
+    </SimpleSource>
+  </VRTRasterBand>
+</VRTDataset>

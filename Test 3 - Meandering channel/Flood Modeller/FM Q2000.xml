@@ -1,0 +1,61 @@
+<?xml version="1.0" standalone="yes"?>
+<ISIS2Dproject xmlns="https://www.floodmodeller.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://www.floodmodeller.com http://schema.floodmodeller.com/4.0/2d.xsd" name="FM Q2000" description="">
+    <!--content for domain 'Domain 1'-->
+    <domain domain_id="Domain 1">
+        <computational_area>
+            <xll>0.000000000000</xll>
+            <yll>0.000000000000</yll>
+            <dx>20</dx>
+            <nrows>250</nrows>
+            <ncols>500</ncols>
+            <active_area>G:\S-Grid\Development\Test 3 - Meandering channel\grid1km_merged.shp</active_area>
+            <rotation>0</rotation>
+        </computational_area>
+        <topography>G:\S-Grid\Development\Test 3 - Meandering channel\dtm.asc</topography>
+        <time>
+            <start_time>00:00:00</start_time>
+            <start_date>1/1/2000</start_date>
+            <total unit="hour">24.00</total>
+        </time>
+        <run_data>
+            <time_step>5</time_step>
+            <scheme>ADI</scheme>
+            <pulsedepth>0.001</pulsedepth>
+            <negdepththreshold>-0.001</negdepththreshold>
+            <velocityheadthreshold>0.5</velocityheadthreshold>
+            <frictionincreasedepth>0.1</frictionincreasedepth>
+        </run_data>
+        <initial_conditions type="globalwaterlevel">2</initial_conditions>
+        <roughness law="manning" type="global">0.1</roughness>
+        <roughness law="manning" type="file">G:\S-Grid\Development\Test 3 - Meandering channel\mannings.asc</roughness>
+        <boundary_conditions>
+            <boundary>
+                <BC>elevation</BC>
+                <file>G:\S-Grid\Development\Test 3 - Meandering channel\Water Level BC.shp</file>
+                <value type="fixedvalue">2</value>
+            </boundary>
+            <boundary>
+                <BC>verticalflow</BC>
+                <file>G:\S-Grid\Development\Test 3 - Meandering channel\Pyflood\Flow Line BC.shp</file>
+                <value type="fixedvalue">2000</value>
+            </boundary>
+        </boundary_conditions>
+        <output_results>
+            <hazard_debris_factor_method>
+                <static factor="1.0" />
+            </hazard_debris_factor_method>
+            <output expand="0" output_id="output" format="SMS9">
+                <variables>Depth
+Elevation
+Flow
+Velocity</variables>
+                <frequency>3600</frequency>
+            </output>
+            <massfile frequency="60">G:\S-Grid\Development\Test 3 - Meandering channel\Flood Modeller\FM Q1000Domain 1.csv</massfile>
+            <check>off</check>
+        </output_results>
+    </domain>
+    <advanced_options>
+        <spatial_diagnostics>on</spatial_diagnostics>
+    </advanced_options>
+</ISIS2Dproject>

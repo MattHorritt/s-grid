@@ -1,0 +1,13 @@
+<VRTDataset rasterXSize="60" rasterYSize="1010">
+  <GeoTransform> -5.0000000000000000e+02,  1.0000000000000000e+02,  0.0000000000000000e+00,  1.0050000000000000e+05,  0.0000000000000000e+00, -1.0000000000000000e+02</GeoTransform>
+  <VRTRasterBand dataType="Float32" band="1">
+    <ColorInterp>Gray</ColorInterp>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="1">output_max_wl_tile0000.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="60" RasterYSize="1010" DataType="Float32" BlockXSize="60" BlockYSize="34" />
+      <SrcRect xOff="0" yOff="0" xSize="60" ySize="1010" />
+      <DstRect xOff="0" yOff="0" xSize="60" ySize="1010" />
+    </SimpleSource>
+  </VRTRasterBand>
+</VRTDataset>
