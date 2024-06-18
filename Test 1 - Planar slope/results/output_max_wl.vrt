@@ -1,12 +1,6 @@
 <VRTDataset rasterXSize="1100" rasterYSize="200">
   <GeoTransform> -5.0000000000000000e+03,  1.0000000000000000e+02,  0.0000000000000000e+00,  1.5000000000000000e+04,  0.0000000000000000e+00, -1.0000000000000000e+02</GeoTransform>
   <VRTRasterBand dataType="Float32" band="1">
-    <Metadata>
-      <MDI key="STATISTICS_MAXIMUM">106.96467590332</MDI>
-      <MDI key="STATISTICS_MEAN">-5429.9481114258</MDI>
-      <MDI key="STATISTICS_MINIMUM">-9999</MDI>
-      <MDI key="STATISTICS_STDDEV">5005.3669662781</MDI>
-    </Metadata>
     <ColorInterp>Gray</ColorInterp>
     <SimpleSource>
       <SourceFilename relativeToVRT="1">output_max_wl_tile0000.tif</SourceFilename>

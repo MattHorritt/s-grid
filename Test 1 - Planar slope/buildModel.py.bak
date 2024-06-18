@@ -6,7 +6,7 @@ import sys
 
 # Provide paths to Python modules and C++ library
 sys.path.append('../') # sgrid.py etc
-extLibName=r"../sgridHydraulics.dll"# C++ library
+extLibName=r"../sgridHydraulics.so"# C++ library
 
 # Topography
 dtmFileName=r"dtm.tiff"
