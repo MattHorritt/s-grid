@@ -1,0 +1,11 @@
+conda create -n sgrid python=3.10
+conda activate sgrid
+
+conda install gdal=3.0.2
+
+shapely
+(numpy)
+scipy
+clundpickle
+matplotlib
+
