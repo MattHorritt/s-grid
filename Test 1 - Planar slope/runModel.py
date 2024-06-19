@@ -1,12 +1,10 @@
 #!/usr/bin/python
-import sys
 
 #############################################################################
-# Control Panel
+# CONTROL PANEL
 
-# Provide paths to Python modules and C++ library
-sys.path.append('../') # sgrid.py etc
-extLibName=r"../sgridHydraulics.dll"# C++ library
+# Provide paths to Python modules and dll etc
+sgridPath = "../"
 
 parametersFile="params.pck" # Output from buildModel.py
 
@@ -54,6 +52,8 @@ maxTimeStep=3600.
 
 
 #############################################################################
+import sys
+sys.path.append(sgridPath) # sgrid.py etc
 
 import pickle
 import numpy
@@ -62,6 +62,17 @@ import os
 
 import sgrid
 import fileIO
+import platform
+
+system = platform.uname().system
+if system == 'Linux':
+    extLibName=r"../sgridHydraulics.so"# C++ library
+elif system == 'Windows':
+    extLibName=r"../sgridHydraulics.dll"# C++ library
+else:
+    sys.exit(f"S-Grid not implemented for operating system {system}")
+
+
 
 sgrid.setPrecision32()
 

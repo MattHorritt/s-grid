@@ -1,7 +1,11 @@
 #!/usr/bin/python
 
 #############################################################################
-# Control Panel
+# CONTROL PANEL
+
+# Provide paths to Python modules and dll etc
+sgridPath = "../"
+
 parametersFile="params.pck"
 
 # Topography
@@ -24,6 +28,8 @@ flowThreshold=10.   # Use this to switch off interpolation between cells with
                     # flows below this value
 
 ###########################################################################
+import sys
+sys.path.append(sgridPath) # sgrid.py etc
 
 import os
 import pickle
@@ -31,9 +37,16 @@ import numpy
 
 import fileIO
 import sgrid
+import platform
 
-# Path to C++ library
-extLibName=r"../sgridHydraulics.so"# C++ library
+system = platform.uname().system
+if system == 'Linux':
+    extLibName=r"../sgridHydraulics.so"# C++ library
+elif system == 'Windows':
+    extLibName=r"../sgridHydraulics.dll"# C++ library
+else:
+    sys.exit(f"S-Grid not implemented for operating system {system}")
+
 
 sgrid.setPrecision32()
 

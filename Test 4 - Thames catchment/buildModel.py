@@ -1,15 +1,13 @@
 #!/usr/bin/python
-import sys
 
 ###############################################################################
 # CONTROL PANEL
 
-# Provide paths to Python modules and C++ library
-sys.path.append('../') # sgrid.py
-extLibName=r"../sgridHydraulics.so"# C++ library
+# Provide paths to Python modules and dll etc
+sgridPath = "../"
 
 # Topography
-dtmFileName=r"DTM_Smooth.tiff"
+dtmFileName=r"DTM.tiff"
 clipPolyName=None # Provide polygon to clip catchment
 useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access
 
@@ -34,10 +32,22 @@ outputFile="./params.pck"
 gridFileName="grid.csv"
 
 ###############################################################################
+import sys
+sys.path.append(sgridPath) # sgrid.py etc
 
 import pickle
 import os
 import sgrid
+import platform
+
+system = platform.uname().system
+if system == 'Linux':
+    extLibName=r"../sgridHydraulics.so"# C++ library
+elif system == 'Windows':
+    extLibName=r"../sgridHydraulics.dll"# C++ library
+else:
+    sys.exit(f"S-Grid not implemented for operating system {system}")
+
 
 sgrid.setPrecision32()
 

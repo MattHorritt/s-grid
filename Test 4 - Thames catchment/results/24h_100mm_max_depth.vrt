@@ -1,12 +1,6 @@
 <VRTDataset rasterXSize="2519" rasterYSize="1446">
   <GeoTransform>  3.9497500000000000e+05,  5.0000000000000000e+01,  0.0000000000000000e+00,  2.1452500000000000e+05,  0.0000000000000000e+00, -5.0000000000000000e+01</GeoTransform>
   <VRTRasterBand dataType="Float32" band="1">
-    <Metadata>
-      <MDI key="STATISTICS_MAXIMUM">7.2659187316895</MDI>
-      <MDI key="STATISTICS_MEAN">0.093964258748452</MDI>
-      <MDI key="STATISTICS_MINIMUM">0</MDI>
-      <MDI key="STATISTICS_STDDEV">0.43788263670357</MDI>
-    </Metadata>
     <ColorInterp>Gray</ColorInterp>
     <SimpleSource>
       <SourceFilename relativeToVRT="1">24h_100mm_max_depth_tile0000.tif</SourceFilename>
