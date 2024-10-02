@@ -4,8 +4,8 @@
 # CONTROL PANEL
 
 # Topography
-dtmFileName=r"Test 1 - Planar slope/dtm.tiff"
-clipPolyName=None # Provide polygon to clip catchment etc
+dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/OS Panorama 50m.tif"
+clipPolyName="/merlin1/Projects/LTIS SLR/GIS/England_2km_buffer.gpkg" # Provide polygon to clip catchment etc
 useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access for large grids
 
 # These values can be used to replace NULLs (e.g. at sea) with sensible values
@@ -16,11 +16,11 @@ noDataReplacement=None
 addNullEdges=False
 
 # Extent and resolution of model
-xll=0.0    # Lower left corner
-yll=0.0
+xll=80000.    # Lower left corner
+yll=3000.
 cellSize=1000.
-xsz=100
-ysz=10
+xsz=600
+ysz=700
 
 # Manning's n
 nFloodplain=0.06    # Can omit this if grid data supplied
