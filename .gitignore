@@ -1,3 +1,4 @@
 *.csv
 *.pck
+__pycache__/*
 

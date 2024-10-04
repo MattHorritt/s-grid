@@ -151,8 +151,9 @@ def saveConveyanceParametersCSV(parX,parY,xll,yll,dx,fileName):
 #            x=xll+i*dx+dx/2
 #            y=yll+j*dx
 
-            f.write("%i,%i,%f,%f,%f,%f,%f,%f,%f,%f\n"%\
-                (i,j,x,y,parX[i,j,0],parX[i,j,1],parX[i,j,2],parX[i,j,3],parX[i,j,4],parX[i,j,5]))
+            if parX[i, j, 0] != -9999:
+                f.write("%i,%i,%f,%f,%f,%f,%f,%f,%f,%f\n"%\
+                    (i,j,x,y,parX[i,j,0],parX[i,j,1],parX[i,j,2],parX[i,j,3],parX[i,j,4],parX[i,j,5]))
 
     # Y directions
     for i in range(xsz):
@@ -162,9 +163,9 @@ def saveConveyanceParametersCSV(parX,parY,xll,yll,dx,fileName):
 
 #            x=xll+i*dx
 #            y=yll+j*dx+dx/2
-
-            f.write("%i,%i,%f,%f,%f,%f,%f,%f,%f,%f\n"%\
-                (i,j,x,y,parY[i,j,0],parY[i,j,1],parY[i,j,2],parY[i,j,3],parY[i,j,4],parY[i,j,5]))
+            if parY[i, j, 0] != -9999:
+                f.write("%i,%i,%f,%f,%f,%f,%f,%f,%f,%f\n"%\
+                    (i,j,x,y,parY[i,j,0],parY[i,j,1],parY[i,j,2],parY[i,j,3],parY[i,j,4],parY[i,j,5]))
 
     f.close()
     return
@@ -183,9 +184,10 @@ def saveStorageParametersCSV(par,xll,yll,dx,fileName):
                 x=xll+i*dx+dx/2
                 y=yll+j*dx+dx/2
 
-                f.write("%i,%i,%f,%f,%f,%f,%f,%f,%f,%f,%f\n"\
-                    %(i,j,x,y,par[i,j,0],par[i,j,1],par[i,j,2],par[i,j,3],par[i,j,4],\
-                        par[i,j,5],par[i,j,6]))
+                if par[i,j,0] != -9999:
+                    f.write("%i,%i,%f,%f,%f,%f,%f,%f,%f,%f,%f\n"\
+                        %(i,j,x,y,par[i,j,0],par[i,j,1],par[i,j,2],par[i,j,3],par[i,j,4],\
+                            par[i,j,5],par[i,j,6]))
     else:
         f.write("I,J,X,Y,zMin,zMax,vip1,vip2,vip3\n")
 
@@ -194,8 +196,9 @@ def saveStorageParametersCSV(par,xll,yll,dx,fileName):
                 x=xll+i*dx+dx/2
                 y=yll+j*dx+dx/2
 
-                f.write("%i,%i,%f,%f,%f,%f,%f,%f,%f\n"\
-                    %(i,j,x,y,par[i,j,0],par[i,j,1],par[i,j,2],par[i,j,3],par[i,j,4]))
+                if par[i,j,0] != -9999:
+                    f.write("%i,%i,%f,%f,%f,%f,%f,%f,%f\n"\
+                        %(i,j,x,y,par[i,j,0],par[i,j,1],par[i,j,2],par[i,j,3],par[i,j,4]))
 
 
     f.close()

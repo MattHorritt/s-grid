@@ -174,9 +174,10 @@ def writeGridCSV(xll,yll,cellSize,xsz,ysz,sp,fileName): #,rain,runoff,cn,fileNam
             wktString+="%0.3f %0.3f"%(x0,y0)
             wktString+="))"
 
-            csvFile.write("%i;%s;%f\n"%(id,wktString,sp[i,j,0]))
-#            csvFile.write("%i;%s;%f;%f;%f;%f\n"%(id,wktString,sp[i,j,0],rain[i,j],runoff[i,j],cn[i,j]))
-            id+=1
+            if sp[i,j,0] != -9999:
+                csvFile.write("%i;%s;%f\n"%(id,wktString,sp[i,j,0]))
+#               csvFile.write("%i;%s;%f;%f;%f;%f\n"%(id,wktString,sp[i,j,0],rain[i,j],runoff[i,j],cn[i,j]))
+                id+=1
     csvFile.close()
 
     return
