@@ -11,6 +11,8 @@ from numpy.ctypeslib import ndpointer
 import tempfile
 from subprocess import call
 import reservoirs
+import shapely, shapely.wkb
+from osgeo import ogr
 
 
 
@@ -446,16 +448,42 @@ def conveyanceParameters(profile,dx,n,plotName=None,csvOutput=None, nList=None):
     return minZ, slope, intercept
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Test if any of one geometry in a vector layer intersects with a shapely polygon
+def vectors_intersect(l1, p2):
+    l1.ResetReading()
+    f1 = l1.GetNextFeature()
+
+    while f1 is not None:
+        g1 = f1.GetGeometryRef()
+        p1 = shapely.wkb.loads(bytes(g1.ExportToIsoWkb()))
+
+        if p1.intersects(p2):
+            return True
+
+        f1 = l1.GetNextFeature()
+
+    return False
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     nFileName=None,
     plotNamePrefix=None, outputPrefix=None,
-    ndv=None,ndr=None,conveyanceFunc=None,storageFunc=None):
+    ndv=None,ndr=None,conveyanceFunc=None,storageFunc=None,
+    clipRasterPoly = None):
 
     if plotNamePrefix is None:
         plotNamePrefix=""
 
     if outputPrefix is None:
         outputPrefix=""
+
+    if clipRasterPoly is not None:
+        clipRasterPolyDataSource = ogr.Open(clipRasterPoly)
+        if clipRasterPolyDataSource is None:
+            raise ValueError("Can't open clip polygon")
+
+        clipRasterPolyLayer = clipRasterPolyDataSource.GetLayerByIndex(0)
+        clipRasterPolyLayer.ResetReading()
 
     dtmFileObj,dtmCellSize,dtmXsz,dtmYsz,dtmXll,dtmYll=fileIO.readScalarGridObj(dtmFileName)
 
@@ -492,6 +520,13 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
             x1=x0+cellSize
             y0=yll+j*cellSize
             y1=y0+cellSize
+
+            # Check if this square intersect clip polygon if given
+            if clipRasterPoly is not None:
+                sq = shapely.Polygon([(x0,y0), (x1,y0), (x1,y1), (x0,y1)])
+
+                if not vectors_intersect(clipRasterPolyLayer, sq):
+                    continue
 
             xi0=int((x0-dtmXll)/dtmCellSize)
             xi1=int((x1-dtmXll)/dtmCellSize)

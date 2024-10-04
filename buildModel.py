@@ -9,7 +9,7 @@ clipPolyName="/merlin1/Projects/LTIS SLR/GIS/England_2km_buffer.gpkg" # Provide 
 useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access for large grids
 
 # These values can be used to replace NULLs (e.g. at sea) with sensible values
-noDataValue=None
+noDataValue=-9999
 noDataReplacement=None
 
 # Use this to add NULL cells around edge - allows water to fall out of model
@@ -48,7 +48,7 @@ arrayType=sgrid.getPrecision()
 
 cellSize=arrayType(cellSize)
 
-# If nFlodplain not defined - use default value
+# If nFloodplain not defined - use default value
 if 'nFloodplain' not in locals():
     nFloodplain=0.03
 
@@ -69,14 +69,11 @@ if useTempTopoFile:
 else:
     tmpDtmFileName=dtmFileName
 
-if clipPolyName is not None:
-	sgrid.clipRasterPoly(tmpDtmFileName,clipPolyName)
-
 convParX, convParY, storagePar=sgrid.gridFlowSetupTiled(tmpDtmFileName,\
     xll, yll, cellSize, xsz, ysz, nChannel, nFloodplain, \
     nFileName=nFloodplainFile,
     ndv=noDataValue,ndr=noDataReplacement,conveyanceFunc=cppConveyanceParameters,\
-    storageFunc=cppCalcStorageParameters,outputPrefix='')
+    storageFunc=cppCalcStorageParameters,outputPrefix='', clipRasterPoly=clipPolyName)
 
 if useTempTopoFile:
     os.remove(tmpDtmFileName)
