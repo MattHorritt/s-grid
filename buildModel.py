@@ -4,7 +4,7 @@
 # CONTROL PANEL
 
 # Topography
-dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/OS Panorama 50m.tif"
+dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/OS Panorama 50m lt20.tif"
 clipPolyName="/merlin1/Projects/LTIS SLR/GIS/England_2km_buffer.gpkg" # Provide polygon to clip catchment etc
 useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access for large grids
 

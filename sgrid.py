@@ -488,6 +488,8 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
     dtmFileObj,dtmCellSize,dtmXsz,dtmYsz,dtmXll,dtmYll=fileIO.readScalarGridObj(dtmFileName)
 
+    fileNdv = dtmFileObj.GetRasterBand(1).GetNoDataValue()
+
     if nFileName is not None:
         nFileObj,lcCellSize,lcXsz,lcYsz,lcXll,lcYll=fileIO.readScalarGridObj(nFileName)
 
@@ -541,12 +543,20 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
                 dtmWindow=dtmFileObj.ReadAsArray(xoff=xi0,yoff=dtmYsz-yi1,xsize=windowXsz,ysize=windowYsz).transpose().copy()
                 dtmWindow=numpy.array(dtmWindow[:,::-1],arrayType)
 
-                dtmWindow[numpy.where(dtmWindow==ndv)]=ndr
-                dtmWindow[numpy.where(dtmWindow<-1e6)]=ndr
-                dtmWindow[numpy.where(numpy.isnan(dtmWindow))]=ndr
+                # Insert NaNs to for cells which are: user specified nodata; gdal specified nodata; or further value
+                # to be replaced by nodata (e.g. zeros out to sea)
+                dtmWindow[numpy.where(dtmWindow == ndv)] = numpy.nan
+                dtmWindow[numpy.where(dtmWindow == ndr)] = numpy.nan
+                dtmWindow[numpy.where(dtmWindow == fileNdv)] = numpy.nan
 
-                if dtmWindow.max()==ndr:
+                # Decide whether to include this cell - if all NaNs, don't bother
+                if numpy.all(numpy.isnan(dtmWindow)):
                     continue
+
+                # For breakpoint only
+                if numpy.any(numpy.isnan(dtmWindow)):
+                    pass
+
 
                 # And get landcover window
                 if nFileName is not None:
@@ -557,7 +567,6 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
                     nWindow[:,:]=nFP
 
                 # X-direction
-
                 conveyanceFunc(0,0,0,yi1-yi0,\
                     dtmWindow,dtmCellSize,windowXsz,windowYsz,nFP,\
                     returnArray,False,\

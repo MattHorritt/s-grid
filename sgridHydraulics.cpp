@@ -1,6 +1,6 @@
 // Compile with:
-//  g++ -O3 -c -fPIC hydraulics_f32.cpp -o hydraulics_f32.o
-//  g++ -shared -Wl,-soname,hydraulics_f32.o -o hydraulics_f32.so hydraulics_f32.o
+//  g++ -O3 -c -fPIC sgridHydraulics.cpp -o sgridHydraulics.o
+//  g++ -shared -Wl,-soname,sgridHydraulics.o -o sgridHydraulics.so sgridHydraulics.o
 
 #include <stdio.h>
 #include <iostream>
@@ -145,20 +145,6 @@ extern "C" void maxVolGrid(float *v, float *mv,
 
 	return;
 }
-
-/* extern "C" void maxVolGrid(float *v, float *mv, int xsz, int ysz)
-{
-	array2d vol,maxVol;
-	int i,j;
-
-	vol.assign(xsz,ysz,v);
-	maxVol.assign(xsz,ysz,mv);
-
-	for(i=0;i<xsz;i++) for(j=0;j<ysz;j++)
-		maxVol(i,j)=MAX(vol(i,j),maxVol(i,j));
-
-	return;
-}*/
 
 //=================================================================================
 extern "C" void calcStorageParameters(float x0, float y0, float x1, float y1,
@@ -343,7 +329,7 @@ extern "C" void calcStorageParameters(float x0, float y0, float x1, float y1,
         	{
         		volIP[wl]=0.;
         		for(i=xi0;i<=xi1;i++) for(j=yi0;j<=yi1;j++)
-        			if(dtm(i,j)<wlList[wl]) volIP[wl]+=(wlList[wl]-dtm(i,j));
+        			if(dtm(i,j)<wlList[wl] && !isnan(dtm(i,j))) volIP[wl]+=(wlList[wl]-dtm(i,j));
         		volIP[wl]/=((abs(xi1-xi0)+1)*(abs(yi1-yi0)+1));
         	}
 
@@ -359,175 +345,7 @@ extern "C" void calcStorageParameters(float x0, float y0, float x1, float y1,
 
 	return;
 }
-//==============================================================================
-/*
-extern "C" void calcStorageParameters(float x0, float y0, float x1, float y1,
-	float *dtmArg, int xsz, int ysz, float xll, float yll, float dx,
-	float *retArray,
-    bool channel, float *cagArg,int cagXsz,int cagYsz,
-       float cagXll, float cagYll, float cagDx,
-    float chanMult, float chanExp, float chanAR, float maxChanD, float gridSize)
-{
-	int xi0, xi1, yi0, yi1;
-	float zMin=1e20, zMax=-1e20, zBank;
-	int i,j,k,wl;
-	array2d dtm,catchmentAreaGrid;
-    float *volIP, *wlList, *cellList;
-    int numCells, numChanCells;
-    float chanWidth, chanDepth, chanArea, maxArea;
-    int cag_xi0,cag_xi1,cag_yi0,cag_yi1;
 
-	dtm.assign(xsz,ysz,dtmArg);
-
-	xi0=int((x0-xll)/dx);
-	xi1=int((x1-xll)/dx);
-	yi0=int((y0-yll)/dx);
-	yi1=int((y1-yll)/dx);
-
-	for(i=xi0;i<=xi1;i++) for(j=yi0;j<=yi1;j++)
-	{
-		zMin=MIN(zMin,dtm(i,j));
-		zMax=MAX(zMax,dtm(i,j));
-	}
-
-
-    if(channel)
-    {
-// Channel parameters
-
-            catchmentAreaGrid.assign(cagXsz,cagYsz,cagArg);
-
-        	cag_xi0=int((x0-cagXll)/cagDx);
-        	cag_xi1=int((x1-cagXll)/cagDx);
-        	cag_yi0=int((y0-cagYll)/cagDx);
-        	cag_yi1=int((y1-cagYll)/cagDx);
-
-           maxArea=-1e20;
-
-           if((cag_xi0>=0)&&(cag_xi0<cagXsz)&&
-            (cag_yi0>=0)&&(cag_yi0<cagYsz)&&
-            (cag_xi1>=0)&&(cag_xi1<cagXsz)&&
-            (cag_yi1>=0)&&(cag_yi1<cagYsz))
-            {
-        	for(i=cag_xi0;i<cag_xi1;i++) for(j=cag_yi0;j<cag_yi1;j++)
-            maxArea=MAX(catchmentAreaGrid(i,j),maxArea);
-            }
-        else maxArea=0;
-
-
-            chanWidth=chanMult*pow(maxArea,chanExp);
-            chanDepth=MIN(chanWidth/chanAR,maxChanD);
-            chanArea=chanWidth*gridSize;
-
-          numChanCells=int(chanArea/(dx*dx));
-
-
-//            printf("%f %f\n",chanWidth,chanDepth);
-
-        zBank=zMin;
-        if(numChanCells>0) zMin-=chanDepth;
-
-        wlList=new float[5];
-
-        if(zMax>(zBank+5))
-        {
-    		wlList[0]=zMin;
-    		wlList[1]=zBank;
-    		wlList[2]=zBank+1;
-    		wlList[3]=zBank+5;
-    		wlList[4]=zMax;
-        }
-        else
-        {
-    		wlList[0]=zMin;
-    		wlList[1]=zBank;
-    		wlList[2]=zBank+1;
-    		wlList[3]=zBank+5;
-    		wlList[4]=zBank+5;
-
-    		zMax=zBank+5;
-        }
-
-
-        	volIP=new float[5];
-          volIP[0]=0.;
-
-//          volIP[1]=chanDepth*chanArea;
-
-          numCells=(abs(xi1-xi0)+1)*(abs(yi1-yi0)+1);
-
-          cellList=new float[numCells];
-
-
-          k=0;
-          for(i=xi0;i<=xi1;i++) for(j=yi0;j<=yi1;j++) cellList[k++]=dtm(i,j);
-
-          std::sort(cellList,cellList+numCells);
-
-          for(i=0;i<numChanCells;i++) cellList[i]=zBank-chanDepth;
-
-        	for(wl=1;wl<5;wl++)
-        	{
-        		volIP[wl]=0.;
-                for(i=0;i<numCells;i++) volIP[wl]+=MAX(wlList[wl]-cellList[i],0);
-        		volIP[wl]/=numCells;
-        	}
-
-        	*(retArray)=zMin;
-        	*(retArray+1)=zBank;
-        	*(retArray+2)=zMax;
-        	*(retArray+3)=volIP[1];
-        	*(retArray+4)=volIP[2];
-        	*(retArray+5)=volIP[3];
-        	*(retArray+6)=volIP[4];
-
-    }
-    else
-    {
-        	wlList=new float[4];
-
-        	if(zMax>(zMin+5) && zMax>(zMin+1))
-        	{
-        		wlList[0]=zMin;
-        		wlList[1]=zMin+1;
-        		wlList[2]=zMin+5;
-        		wlList[3]=zMax;
-
-        	}
-        	else
-        	{
-        		wlList[0]=zMin;
-        		wlList[1]=zMin+1;
-        		wlList[2]=zMin+5;
-        		wlList[3]=zMin+5;
-
-        		zMax=zMin+5;
-        	}
-
-
-        	volIP=new float[4];
-           volIP[0]=0.;
-        	for(wl=1;wl<4;wl++)
-        	{
-        		volIP[wl]=0.;
-        		for(i=xi0;i<=xi1;i++) for(j=yi0;j<=yi1;j++)
-        			if(dtm(i,j)<wlList[wl]) volIP[wl]+=(wlList[wl]-dtm(i,j));
-        		volIP[wl]/=((abs(xi1-xi0)+1)*(abs(yi1-yi0)+1));
-        	}
-
-        	*(retArray)=zMin;
-        	*(retArray+1)=zMax;
-        	*(retArray+2)=volIP[1];
-        	*(retArray+3)=volIP[2];
-        	*(retArray+4)=volIP[3];
-    }
-
-
-
-
-	return;
-}
-*/
 
 void logLinearRegression(int n, float *x, float *y, float &s,float &i)
 {
@@ -589,18 +407,30 @@ extern "C" void conveyanceParameters(int xi0, int yi0, int xi1, int yi1,
 
  	pptr=0;
 
+
+    // Create profile using only non-NaN values
+    profileLength = 0;
 	for(;;)
 	{
-		profile[pptr]=dtm(xi0,yi0);
-		nProfile[pptr]=manningsGrid(xi0,yi0);
+	    if(!isnan(dtm(xi0,yi0)))
+	    {
 
-           pptr++;
+            profile[pptr]=dtm(xi0,yi0);
+            nProfile[pptr]=manningsGrid(xi0,yi0);
+
+               pptr++;
+               profileLength++;
+        }
+
 		if (xi0==xi1 && yi0==yi1) break;
 		e2 = err;
 		if (e2 >-dx) { err -= dy; xi0 += sx; }
 		if (e2 < dy) { err += dx; yi0 += sy; }
 	}
 
+//    printf("\n");
+//    for(i=0;i<profileLength;i++) printf("%f %i ", profile[i], isnan(profile[i]));
+//    printf("\n");
 
     dl=dtmDx*crossSectionLength/profileLength;
 
@@ -990,37 +820,6 @@ extern "C" float calcFlowInertial(float Q, float wl1, float wl2, float zEdge, fl
 
     return(flow);
 }
-
-/*
-
-extern "C" float calcFlowInertial(float Q, float wl1, float wl2, float zEdge, float slope, float intercept, float dxGrid, float n, float dt)
-{
-	float wl,kMin,k,S,flow;
-	float g=9.81,h,A,flowNI;
-
-	wl=MAX(wl1,wl2);
-
-    if(wl<=zEdge || zEdge==-9999) return 0.;
-
-    kMin=(dxGrid*(pow((wl-zEdge),1.666667))/n);
-    k=exp(slope*log(kMin)+intercept);
-
-	h=wl-zEdge;
-	A=MAX(1.,k*n/pow(h,0.6667));
-
-    S=(wl2-wl1)/dxGrid;
-
-    flow=(Q-g*S*A*dt)/(1.+g*A*dt*fabs(Q)/(k*k));
-
-    if(S>0) flowNI=-k*sqrt(S);
-    else flowNI=k*sqrt(-S);
-
-	if(isnan(flow)) flow=flowNI;
-
-    return(flow);
-}
-
-*/
 
 extern "C" float calcFlow(float wl1, float wl2, float zEdge, float slope, float intercept, float dxGrid, float n)
 {
@@ -2589,76 +2388,4 @@ extern "C" void scsAdditionalRunoff(float *totalRainfallArg, float *additionalRa
 }
 
 
-/*
 
-
-extern "C" void conveyanceParameters(int xi0, int yi0, int xi1, int yi1,
-                    float *dtmArg,float dtmDx, int xsz, int ysz ,
-                    float manningsN,
-                    float *returnTriple)
-{
-	array2d dtm;
-	int profileLength;
-	float *profile,crossSectionLength,maxDepth=10.,maxZ=-1e20,dl,wl;
-	int nConveyanceLevels=5;
-	int i,j,pptr,n;
-	float minZ, slope, intercept;
-
-//	timeBomb();
-
-	dtm.assign(xsz,ysz,dtmArg);
-
-	profileLength=MAX(abs(xi1-xi0),abs(yi1-yi0))+1;
-	profile=new float[profileLength];
-
-    crossSectionLength=sqrt((xi1-xi0)*(xi1-xi0)+(yi1-yi0)*(yi1-yi0));
-
-  	int dx = abs(xi1-xi0), sx = xi0<xi1 ? 1 : -1;
-  	int dy = abs(yi1-yi0), sy = yi0<yi1 ? 1 : -1;
-  	int err = (dx>dy ? dx : -dy)/2, e2;
-
- 	pptr=0;
-
-	for(;;)
-	{
-		profile[pptr++]=dtm(xi0,yi0);
-		if (xi0==xi1 && yi0==yi1) break;
-		e2 = err;
-		if (e2 >-dx) { err -= dy; xi0 += sx; }
-		if (e2 < dy) { err += dx; yi0 += sy; }
-	}
-
-
-    dl=dtmDx*crossSectionLength/profileLength;
-
-	minZ=1e20;
-	for(i=0;i<profileLength;i++)
-	{
-		minZ=MIN(profile[i],minZ);
-		maxZ=MAX(profile[i],maxZ);
-	}
-
-	float *conveyance=new float[nConveyanceLevels];
-	float *conveyanceUsingMinZ=new float[nConveyanceLevels];
-
-	for(i=0;i<nConveyanceLevels;i++)
-	{
-		wl=minZ+maxDepth*pow(10,(-2.+i*2./(nConveyanceLevels)));
-
-        conveyanceUsingMinZ[i]=(dl*profileLength*pow(wl-minZ,1.666667)/manningsN);
-
-		conveyance[i]=0.;
-		for(j=0;j<profileLength;j++)
-			conveyance[i]+=dl*pow(MAX(0.,wl-profile[j]),1.6666667)/manningsN;
-	}
-
-	logLinearRegression(nConveyanceLevels,conveyanceUsingMinZ,conveyance,slope,intercept);
-
-	*(returnTriple)=minZ;
-	*(returnTriple+1)=slope;
-	*(returnTriple+2)=intercept;
-
-	return;
-}
-
-*/
