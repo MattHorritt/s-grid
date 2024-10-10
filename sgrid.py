@@ -536,8 +536,8 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
             yi0=int((y0-dtmYll)/dtmCellSize)
             yi1=int((y1-dtmYll)/dtmCellSize)
 
-            windowXsz=xi1-xi0+1
-            windowYsz=yi1-yi0+1
+            windowXsz=xi1-xi0
+            windowYsz=yi1-yi0
 
             if xi0>=0 and xi1<dtmXsz-1 and yi0>=0 and yi1<dtmYsz-1: # Within DTM extent - grab window
                 dtmWindow=dtmFileObj.ReadAsArray(xoff=xi0,yoff=dtmYsz-yi1,xsize=windowXsz,ysize=windowYsz).transpose().copy()
