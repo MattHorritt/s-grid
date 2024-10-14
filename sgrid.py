@@ -519,6 +519,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
         ticker+=1
         for j in range(ysz):
 
+            # These are the square extents in map coordinates
             x0=xll+i*cellSize
             x1=x0+cellSize
             y0=yll+j*cellSize
@@ -531,16 +532,17 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
                 if not vectors_intersect(clipRasterPolyLayer, sq):
                     continue
 
+            # These are the square extents in array coordinates. All these are INSIDE the box.
             xi0=int((x0-dtmXll)/dtmCellSize)
-            xi1=int((x1-dtmXll)/dtmCellSize)
+            xi1=int((x1-dtmXll)/dtmCellSize)-1
             yi0=int((y0-dtmYll)/dtmCellSize)
-            yi1=int((y1-dtmYll)/dtmCellSize)
+            yi1=int((y1-dtmYll)/dtmCellSize)-1
 
-            windowXsz=xi1-xi0
-            windowYsz=yi1-yi0
+            windowXsz=xi1-xi0 + 1
+            windowYsz=yi1-yi0 + 1
 
-            if xi0>=0 and xi1<dtmXsz-1 and yi0>=0 and yi1<dtmYsz-1: # Within DTM extent - grab window
-                dtmWindow=dtmFileObj.ReadAsArray(xoff=xi0,yoff=dtmYsz-yi1,xsize=windowXsz,ysize=windowYsz).transpose().copy()
+            if xi0>=0 and xi1<=dtmXsz-1 and yi0>=0 and yi1<=dtmYsz-1: # Within DTM extent - grab window
+                dtmWindow=dtmFileObj.ReadAsArray(xoff=xi0,yoff=dtmYsz-1-yi1,xsize=windowXsz,ysize=windowYsz).transpose().copy()
                 dtmWindow=numpy.array(dtmWindow[:,::-1],arrayType)
 
                 # Insert NaNs to for cells which are: user specified nodata; gdal specified nodata; or further value
