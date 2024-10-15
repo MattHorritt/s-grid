@@ -479,11 +479,18 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
         outputPrefix=""
 
     if clipRasterPoly is not None:
-        clipRasterPolyDataSource = ogr.Open(clipRasterPoly)
+        if ':' in clipRasterPoly:
+            fileName = clipRasterPoly.split(':')[0]
+            lyrName = clipRasterPoly.split(':')[1]
+            clipRasterPolyDataSource = ogr.Open(fileName)
+            clipRasterPolyLayer = clipRasterPolyDataSource.GetLayer(lyrName)
+        else:
+            clipRasterPolyDataSource = ogr.Open(clipRasterPoly)
+            clipRasterPolyLayer = clipRasterPolyDataSource.GetLayerByIndex(0)
+
         if clipRasterPolyDataSource is None:
             raise ValueError("Can't open clip polygon")
 
-        clipRasterPolyLayer = clipRasterPolyDataSource.GetLayerByIndex(0)
         clipRasterPolyLayer.ResetReading()
 
     dtmFileObj,dtmCellSize,dtmXsz,dtmYsz,dtmXll,dtmYll=fileIO.readScalarGridObj(dtmFileName)

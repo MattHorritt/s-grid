@@ -4,8 +4,8 @@
 # CONTROL PANEL
 
 # Topography
-dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/OS Panorama 50m lt20.tif"
-clipPolyName="/merlin1/Projects/LTIS SLR/GIS/England_2km_buffer.gpkg" # Provide polygon to clip catchment etc
+dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/All_lt20.tif"
+clipPolyName="/merlin1/Projects/LTIS SLR/GIS/England_buffer.gpkg:1km" # Provide polygon to clip catchment etc
 useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access for large grids
 
 # These values can be used to replace NULLs (e.g. at sea) with sensible values
@@ -19,8 +19,10 @@ addNullEdges=False
 xll=80000.    # Lower left corner
 yll=3000.
 cellSize=1000.
-xsz=600
-ysz=700
+xsz=100
+ysz=100
+# xsz=600
+# ysz=700
 
 # Manning's n
 nFloodplain=0.06    # Can omit this if grid data supplied
