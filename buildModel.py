@@ -15,13 +15,17 @@ replacement_values = {-10:20, 20:20}
 addNullEdges=False
 
 # Extent and resolution of model
-xll=80000.    # Lower left corner
-yll=3000.
+# xll=80000.    # Lower left corner
+# yll=3000.
 cellSize=1000.
-# xsz=100
-# ysz=100
-xsz=600
-ysz=700
+
+xll = 220000.
+yll = 46000.
+
+xsz=50
+ysz=50
+# xsz=600
+# ysz=700
 
 # Manning's n
 nFloodplain=0.06    # Can omit this if grid data supplied

@@ -473,7 +473,7 @@ def vectors_intersect(l1, p2):
 # Wrapper for processCell so we can pass single argument tuple for threading.
 # Bit of a hack - but works.
 def processCellWrapper(argTuple):
-    print(f"In processCellWrapper processing cell [{argTuple[0]},{argTuple[1]}]...")
+    # print(f"In processCellWrapper processing cell [{argTuple[0]},{argTuple[1]}]...")
 
     dtm = fileIO.geoGrid(argTuple[5], objOnly = True)
 
@@ -487,7 +487,7 @@ def processCellWrapper(argTuple):
     #                     numpy.zeros(7,dtype=arrayType) - 9999,
     #                     numpy.zeros(5,dtype=arrayType) - 9999)
 
-    return retTuple
+    return argTuple, retTuple # Return arguments as well - useful for tracking the results
 
 def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, nFileObj = None, clipLyr = None, rvs = None):
     # These are the square extents in map coordinates
@@ -638,7 +638,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     else:
         # set_start_method('spawn')
 
-        pool = ThreadPool(4)
+        pool = ThreadPool(threads)
         funcArgList = []
         returnValues = []
         for i, j in product(range(xsz), range(ysz)):
@@ -648,20 +648,23 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
         # for fArgs in funcArgList:
         #     returnValues.append(processCellWrapper(fArgs))
 
-        returnValues = pool.map(processCellWrapper, funcArgList)
+        counter = 0
 
+        tickerStep=int(xsz * ysz / 100)
+        ticker = 0
 
-        for av, rv in zip(funcArgList, returnValues):
-            i = av[0]
-            j = av[1]
-            convParX[i, j, :] = rv[0]
-            convParY[i, j, :] = rv[1]
-            storagePar[i, j, :] = rv[2]
+        for arg, ret in pool.imap(processCellWrapper, funcArgList, chunksize=10):
 
-        # processCell(argTuple[0], argTuple[1], argTuple[2],
-        #             argTuple[3], argTuple[4], argTuple[5],
-        #             argTuple[6], argTuple[7], argTuple[8],
-        #             nFileObj=argTuple[9], clipLyr=argTuple[10], rvs=argTuple[11])
+            if (ticker%tickerStep)==0: print("%i%% ..."%(100.*ticker/(xsz * ysz)), end='')
+            sys.stdout.flush()
+            ticker += 1
+
+            i = arg[0]
+            j = arg[1]
+            convParX[i, j, :] = ret[0]
+            convParY[i, j, :] = ret[1]
+            storagePar[i, j, :] = ret[2]
+
 
 
         pass
