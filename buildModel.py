@@ -4,13 +4,12 @@
 # CONTROL PANEL
 
 # Topography
-dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/All_lt20.tif"
+dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/OS Panorama 50m lt20.tif"
 clipPolyName="/merlin1/Projects/LTIS SLR/GIS/England_buffer.gpkg:1km" # Provide polygon to clip catchment etc
 useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access for large grids
 
 # These values can be used to replace NULLs (e.g. at sea) with sensible values
-noDataValue=-9999
-noDataReplacement=None
+replacement_values = {-9999:20, 20:20}
 
 # Use this to add NULL cells around edge - allows water to fall out of model
 addNullEdges=False
@@ -19,10 +18,10 @@ addNullEdges=False
 xll=80000.    # Lower left corner
 yll=3000.
 cellSize=1000.
-xsz=100
-ysz=100
-# xsz=600
-# ysz=700
+# xsz=100
+# ysz=100
+xsz=600
+ysz=700
 
 # Manning's n
 nFloodplain=0.06    # Can omit this if grid data supplied
@@ -37,6 +36,11 @@ gridFileName="grid.csv"
 import pickle
 import os
 import sgrid
+import time
+
+
+t1=time.time()
+
 
 # Path to C++ library
 extLibName=r"./sgridHydraulics.so"# C++ library
@@ -74,7 +78,7 @@ else:
 convParX, convParY, storagePar=sgrid.gridFlowSetupTiled(tmpDtmFileName,\
     xll, yll, cellSize, xsz, ysz, nChannel, nFloodplain, \
     nFileName=nFloodplainFile,
-    ndv=noDataValue,ndr=noDataReplacement,conveyanceFunc=cppConveyanceParameters,\
+    rvs = replacement_values,conveyanceFunc=cppConveyanceParameters,\
     storageFunc=cppCalcStorageParameters,outputPrefix='', clipRasterPoly=clipPolyName)
 
 if useTempTopoFile:
@@ -92,3 +96,6 @@ if gridFileName is not None:
 file=open(outputFile,"wb")
 pickle.dump((xll, yll, cellSize, xsz, ysz, convParX, convParY, storagePar), file)
 file.close()
+
+t2=time.time()
+print("Completed in %0.2fs"%((t2-t1)))

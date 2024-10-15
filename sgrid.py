@@ -149,7 +149,7 @@ def writeGridCSV(xll,yll,cellSize,xsz,ysz,sp,fileName): #,rain,runoff,cn,fileNam
 
 
     outCsvt=open(fileName+"t","w")
-    outCsvt.write("\"Integer\",\"String\",\"Real\"\n")
+    outCsvt.write("\"Integer\",\"Integer\",\"Integer\",\"String\",\"Real\"\n")
     outCsvt.close()
 
     csvFile=open(fileName,"w")
@@ -157,7 +157,7 @@ def writeGridCSV(xll,yll,cellSize,xsz,ysz,sp,fileName): #,rain,runoff,cn,fileNam
     id=0
 
 #    csvFile.write("id;wkt;elevation;rainfall;runoff;cn\n")
-    csvFile.write("id;wkt;elevation\n")
+    csvFile.write("id;i;j;wkt;elevation\n")
 
     for i in range(xsz):
         for j in range(ysz):
@@ -175,7 +175,7 @@ def writeGridCSV(xll,yll,cellSize,xsz,ysz,sp,fileName): #,rain,runoff,cn,fileNam
             wktString+="))"
 
             if sp[i,j,0] != -9999:
-                csvFile.write("%i;%s;%f\n"%(id,wktString,sp[i,j,0]))
+                csvFile.write("%i;%i;%i;%s;%f\n"%(id,i,j,wktString,sp[i,j,0]))
 #               csvFile.write("%i;%s;%f;%f;%f;%f\n"%(id,wktString,sp[i,j,0],rain[i,j],runoff[i,j],cn[i,j]))
                 id+=1
     csvFile.close()
@@ -466,11 +466,94 @@ def vectors_intersect(l1, p2):
     return False
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, nFileObj = None, clipLyr = None, rvs = None):
+    # These are the square extents in map coordinates
+    x0 = xll + i * cellSize
+    x1 = x0 + cellSize
+    y0 = yll + j * cellSize
+    y1 = y0 + cellSize
+
+    # Return arrays for results
+    conveyanceValuesX = numpy.zeros(7,dtype=arrayType) - 9999
+    conveyanceValuesY = numpy.zeros(7,dtype=arrayType) - 9999
+    storageValues = numpy.zeros(5,dtype=arrayType) - 9999
+
+    # These are the square extents in array coordinates. All these are INSIDE the box.
+    xi0 = int((x0 - dtm.xll) / dtm.dx)
+    xi1 = int((x1 - dtm.xll) / dtm.dx) - 1
+    yi0 = int((y0 - dtm.yll) / dtm.dx)
+    yi1 = int((y1 - dtm.yll) / dtm.dx) - 1
+
+    windowXsz = xi1 - xi0 + 1
+    windowYsz = yi1 - yi0 + 1
+
+    if xi0 >= 0 and xi1 <= dtm.xsz - 1 and yi0 >= 0 and yi1 <= dtm.ysz - 1:  # Within DTM extent - grab window
+        dtmWindow = dtm.obj.ReadAsArray(xoff=xi0, yoff=dtm.ysz - 1 - yi1, xsize=windowXsz,
+                                           ysize=windowYsz).transpose().copy()
+        dtmWindow = numpy.array(dtmWindow[:, ::-1], arrayType)
+
+        # Use -9999 as no data value as this is what's used in C++ code
+        dtmWindow[numpy.where(dtmWindow == dtm.noDataValue)] = -9999
+
+        # Replace values according to replacement values dict
+        if rvs is not None:
+            for v1, v2 in rvs.items():
+                dtmWindow[numpy.where(dtmWindow == v1)] = v2
+
+        # Decide whether to include this cell - if all NaNs, or all replacement values, skip
+        if numpy.all(dtmWindow == -9999):
+            return conveyanceValuesX, conveyanceValuesY, storageValues
+        for v1 in rvs.keys():
+            if numpy.all(dtmWindow == v1):
+                return conveyanceValuesX, conveyanceValuesY, storageValues
+
+        # Check if this square intersect clip polygon if given - this test is potentially slow - so do last
+        if clipLyr is not None:
+            sq = shapely.Polygon([(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
+
+            if not vectors_intersect(clipLyr, sq):
+                return conveyanceValuesX, conveyanceValuesY, storageValues
+
+        # And get landcover window
+        if nFileObj is not None:
+            nWindow = nFileObj.ReadAsArray(xoff=xi0, yoff=dtm.ysz - yi1, xsize=windowXsz,
+                                           ysize=windowYsz).transpose().copy()
+            nWindow = nWindow[:, ::-1]
+        else:
+            nWindow = dtmWindow.copy()
+            nWindow[:, :] = nFp
+
+        # X-direction
+        conveyanceFunc(0, 0, 0, yi1 - yi0, \
+                       dtmWindow, dtm.dx, windowXsz, windowYsz, nFp, \
+                       conveyanceValuesX, False, \
+                       0., dtmWindow, 0, 0, 0, 0, \
+                       0, 0, 0, 0, 0, 0, nWindow)
+
+        # Y-direction
+        conveyanceFunc(0, 0, xi1 - xi0, 0, \
+                       dtmWindow, dtm.dx, xi1 - xi0 + 1, yi1 - yi0 + 1, nFp, \
+                       conveyanceValuesY, False, \
+                       0., dtmWindow, 0, 0, 0, 0, \
+                       0, 0, 0, 0, 0, 0, nWindow)
+
+        # Cell storage
+        if storageFunc is not None:
+            storageFunc(arrayType(x0), arrayType(y0), arrayType(x1), arrayType(y1), dtmWindow, \
+                        windowXsz, windowYsz, arrayType(x0), arrayType(y0), \
+                        arrayType(dtm.dx), storageValues, \
+                        False, dtmWindow, 0, 0, \
+                        0, 0, 0, \
+                        0, 0, 0, 0, 0)
+
+    return conveyanceValuesX, conveyanceValuesY, storageValues
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     nFileName=None,
     plotNamePrefix=None, outputPrefix=None,
-    ndv=None,ndr=None,conveyanceFunc=None,storageFunc=None,
-    clipRasterPoly = None):
+    rvs=None,ndr=None,conveyanceFunc=None,storageFunc=None,
+    clipRasterPoly = None, threads = None):
 
     if plotNamePrefix is None:
         plotNamePrefix=""
@@ -493,15 +576,15 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
         clipRasterPolyLayer.ResetReading()
 
-    dtmFileObj,dtmCellSize,dtmXsz,dtmYsz,dtmXll,dtmYll=fileIO.readScalarGridObj(dtmFileName)
-
-    fileNdv = dtmFileObj.GetRasterBand(1).GetNoDataValue()
+    # dtmFileObj,dtmCellSize,dtmXsz,dtmYsz,dtmXll,dtmYll=fileIO.readScalarGridObj(dtmFileName)
+    dtm = fileIO.geoGrid(dtmFileName, objOnly = True)
+    # fileNdv = dtmFileObj.GetRasterBand(1).GetNoDataValue()
 
     if nFileName is not None:
         nFileObj,lcCellSize,lcXsz,lcYsz,lcXll,lcYll=fileIO.readScalarGridObj(nFileName)
 
-    # Might need to fettle no data value
-    ndv=arrayType(ndv)
+    # # Might need to fettle no data value
+    # ndv=arrayType(ndv)
 
     convParX=numpy.zeros((xsz+1,ysz,7),dtype=arrayType)-9999.
     convParY=numpy.zeros((xsz,ysz+1,7),dtype=arrayType)-9999.
@@ -509,9 +592,6 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     storagePar=numpy.zeros((xsz,ysz,5),dtype=arrayType)-9999.
 
     plotName=None
-
-    returnArray=numpy.zeros(7,dtype=arrayType)
-    tmp5=numpy.zeros(5,dtype=arrayType)
 
     ticker=0
 
@@ -525,221 +605,12 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
         sys.stdout.flush()
         ticker+=1
         for j in range(ysz):
+            cX, cY, st = processCell(i, j, xll, yll, cellSize, dtm, nFP, conveyanceFunc, storageFunc,
+                                     clipLyr = clipRasterPolyLayer, rvs = rvs)
 
-            # These are the square extents in map coordinates
-            x0=xll+i*cellSize
-            x1=x0+cellSize
-            y0=yll+j*cellSize
-            y1=y0+cellSize
-
-            # Check if this square intersect clip polygon if given
-            if clipRasterPoly is not None:
-                sq = shapely.Polygon([(x0,y0), (x1,y0), (x1,y1), (x0,y1)])
-
-                if not vectors_intersect(clipRasterPolyLayer, sq):
-                    continue
-
-            # These are the square extents in array coordinates. All these are INSIDE the box.
-            xi0=int((x0-dtmXll)/dtmCellSize)
-            xi1=int((x1-dtmXll)/dtmCellSize)-1
-            yi0=int((y0-dtmYll)/dtmCellSize)
-            yi1=int((y1-dtmYll)/dtmCellSize)-1
-
-            windowXsz=xi1-xi0 + 1
-            windowYsz=yi1-yi0 + 1
-
-            if xi0>=0 and xi1<=dtmXsz-1 and yi0>=0 and yi1<=dtmYsz-1: # Within DTM extent - grab window
-                dtmWindow=dtmFileObj.ReadAsArray(xoff=xi0,yoff=dtmYsz-1-yi1,xsize=windowXsz,ysize=windowYsz).transpose().copy()
-                dtmWindow=numpy.array(dtmWindow[:,::-1],arrayType)
-
-                # Insert NaNs to for cells which are: user specified nodata; gdal specified nodata; or further value
-                # to be replaced by nodata (e.g. zeros out to sea)
-                dtmWindow[numpy.where(dtmWindow == ndv)] = numpy.nan
-                dtmWindow[numpy.where(dtmWindow == ndr)] = numpy.nan
-                dtmWindow[numpy.where(dtmWindow == fileNdv)] = numpy.nan
-
-                # Decide whether to include this cell - if all NaNs, don't bother
-                if numpy.all(numpy.isnan(dtmWindow)):
-                    continue
-
-                # For breakpoint only
-                if numpy.any(numpy.isnan(dtmWindow)):
-                    pass
-
-
-                # And get landcover window
-                if nFileName is not None:
-                    nWindow=nFileObj.ReadAsArray(xoff=xi0,yoff=dtmYsz-yi1,xsize=windowXsz,ysize=windowYsz).transpose().copy()
-                    nWindow=nWindow[:,::-1]
-                else:
-                    nWindow=dtmWindow.copy()
-                    nWindow[:,:]=nFP
-
-                # X-direction
-                conveyanceFunc(0,0,0,yi1-yi0,\
-                    dtmWindow,dtmCellSize,windowXsz,windowYsz,nFP,\
-                    returnArray,False,\
-                    0.,dtmWindow,0,0,0,0, \
-                    0,0,0,0,0,0,nWindow)
-
-                convParX[i,j,:]=returnArray[:]
-
-                # Y-direction
-                conveyanceFunc(0,0,xi1-xi0,0,\
-                    dtmWindow,dtmCellSize,xi1-xi0+1,yi1-yi0+1,nFP,\
-                    returnArray,False,\
-                    0.,dtmWindow,0,0,0,0, \
-                    0,0,0,0,0,0,nWindow)
-
-                convParY[i,j,:]=returnArray[:]
-
-                # Cell storage
-                if storageFunc is not None:
-                    storageFunc(arrayType(x0),arrayType(y0),arrayType(x1),arrayType(y1),dtmWindow,\
-                        windowXsz,windowYsz,arrayType(x0),arrayType(y0), \
-                        arrayType(dtmCellSize),tmp5,\
-                        False,dtmWindow,0,0,\
-                        0,0,0,\
-                        0,0,0,0,0)
-                    storagePar[i,j,:]=tmp5
-                else:
-                    storagePar[i,j,:]=calcStorageParameters([(x0,y0),(x1,y1)],\
-                        dtmWindow,x0,y0,dtmCellSize,plotName=plotName,csvOutput=False)
-
-    print("Done.")
-
-    fileIO.saveConveyanceParametersCSV(convParX,convParY,xll,yll,cellSize,\
-        outputPrefix+"conveyanceParams.csv")
-    fileIO.saveStorageParametersCSV(storagePar,xll,yll,cellSize,\
-        outputPrefix+"storageParams.csv")
-
-    return convParX, convParY, storagePar #, bankLevel
-
-
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-def gridFlowSetupTiled2(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
-    plotNamePrefix=None, outputPrefix=None,
-    ndv=None,ndr=None,conveyanceFunc=None,storageFunc=None):
-
-    if plotNamePrefix is None:
-        plotNamePrefix=""
-
-    if outputPrefix is None:
-        outputPrefix=""
-
-    dtmFileObj,dtmCellSize,dtmXsz,dtmYsz,dtmXll,dtmYll=fileIO.readScalarGridObj(dtmFileName)
-
-    # Might need to fettle no data value
-    ndv=arrayType(ndv)
-
-
-    convParX=numpy.zeros((xsz+1,ysz,6),dtype=arrayType)-9999.
-    convParY=numpy.zeros((xsz,ysz+1,6),dtype=arrayType)-9999.
-
-    storagePar=numpy.zeros((xsz,ysz,5),dtype=arrayType)-9999.
-
-    count=0
-    plotName=None
-
-    returnArray=numpy.zeros(6,dtype=arrayType)
-    tmp5=numpy.zeros(5,dtype=arrayType)
-    tmp7=numpy.zeros(7,dtype=arrayType)
-
-    ticker=0
-
-    stepSize=10 # Load bigger tiles - should speed things up
-
-    if xsz>100:
-        tickerStep=int(xsz/100)
-    else:
-        tickerStep=1
-
-    for i in range(0,xsz,stepSize):
-        print(i, xsz)
-        if (ticker%tickerStep)==0: print("%i%% ..."%(100.*ticker/xsz),end='')
-        sys.stdout.flush()
-        ticker+=1
-        for j in range(0,ysz,stepSize):
-
-            # Dimensions of tile to load from file
-            x0=xll+i*cellSize
-            x1=x0+cellSize*stepSize
-            y0=yll+j*cellSize
-            y1=y0+cellSize*stepSize
-
-            xi0=int((x0-dtmXll)/dtmCellSize)
-            xi1=int((x1-dtmXll)/dtmCellSize)
-            yi0=int((y0-dtmYll)/dtmCellSize)
-            yi1=int((y1-dtmYll)/dtmCellSize)
-
-            # Make sure doesn't extend beyond file
-            xi1=min(xi1,dtmXsz-1)
-            yi1=min(yi1,dtmYsz-1)
-
-            windowXsz=xi1-xi0+1
-            windowYsz=yi1-yi0+1
-
-            # Now read in array
-            dtmWindow=dtmFileObj.ReadAsArray(xoff=xi0,yoff=dtmYsz-yi1,xsize=windowXsz,ysize=windowYsz).transpose().copy()
-
-            dtmWindow=numpy.array(dtmWindow[:,::-1],arrayType)
-            dtmWindow[numpy.where(dtmWindow==ndv)]=ndr
-            dtmWindow[numpy.where(numpy.isnan(dtmWindow))]=ndr
-
-            # And calculate parameters for model cells
-            for ii in range(i,i+stepSize):
-                for jj in range(j,j+stepSize):
-
-                    if ii>=xsz or jj>=ysz:
-                        continue
-
-                    xx0=x0+(ii-i)*cellSize
-                    xx1=xx0+cellSize
-                    yy0=y0+(jj-j)*cellSize
-                    yy1=yy0+cellSize
-
-                    xxi0=int((xx0-x0)/dtmCellSize)
-                    xxi1=int((xx1-x0)/dtmCellSize)
-                    yyi0=int((yy0-y0)/dtmCellSize)
-                    yyi1=int((yy1-y0)/dtmCellSize)
-
-
-                    cellWindow=dtmWindow[xxi0:xxi1+1,yyi0:yyi1+1]
-
-                    cwXsz,cwYsz=cellWindow.shape
-
-                    # X-direction
-                    conveyanceFunc(0,0,0,cwYsz-1,\
-                        cellWindow,dtmCellSize,cwXsz,cwYsz,nFP,\
-                        returnArray,False,\
-                        0.,cellWindow,0,0,0,0, \
-                        0,0,0,0,0,0)
-
-                    convParX[ii,jj,:]=returnArray[:]
-
-                    # Y-direction
-                    conveyanceFunc(0,0,cwXsz-1,0,\
-                        cellWindow,dtmCellSize,cwXsz,cwYsz,nFP,\
-                        returnArray,False,\
-                        0.,cellWindow,0,0,0,0, \
-                        0,0,0,0,0,0)
-
-                    convParY[ii,jj,:]=returnArray[:]
-
-                    # Cell storage
-
-                    storageFunc(arrayType(xx0),arrayType(yy0),arrayType(xx1),arrayType(yy1),cellWindow,\
-                        cwXsz,cwYsz,arrayType(xx0),arrayType(yy0), \
-                        arrayType(dtmCellSize),tmp5,\
-                        False,cellWindow,0,0,\
-                        0,0,0,\
-                        0,0,0,0,0)
-                    storagePar[ii,jj,:]=tmp5
-
-
-
-#                    storagePar[i,j,:]=calcStorageParameters([(xx0,yy0),(xx1,yy1)],\
-#                        cellWindow,xx0,yy0,dtmCellSize,plotName=plotName,csvOutput=False)
+            convParX[i, j, :] = cX
+            convParY[i, j, :] = cY
+            storagePar[i, j, :] = st
 
     print("Done.")
 

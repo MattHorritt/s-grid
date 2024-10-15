@@ -8,6 +8,86 @@ import os
 gdal.DontUseExceptions()
 os.environ['PROJ_LIB'] = '/home/mattyh/miniconda3/envs/sgrid/share/proj'
 
+class geoGrid:
+    def __init__(self,*args,**kwargs):
+
+#        print(args, len(args))
+
+        if len(args)==6:
+            self.grid=args[0]
+            self.xsz=args[1]
+            self.ysz=args[2]
+            self.xll=args[3]
+            self.yll=args[4]
+            self.dx=args[5]
+
+        elif len(args)==1:
+            f=gdal.Open(args[0])
+
+            if "objOnly" in kwargs and kwargs["objOnly"]:
+                self.obj = f
+            else:
+                self.grid=f.ReadAsArray().transpose().copy()
+
+                if "dataType" in kwargs:
+                    self.grid=numpy.array(self.grid[:,::-1],kwargs["dataType"])
+                else:
+                    self.grid=numpy.array(self.grid[:,::-1])
+
+            geo=f.GetGeoTransform()
+
+            self.xsz = f.RasterXSize
+            self.ysz = f.RasterYSize
+
+            self.dx = geo[1]
+            self.xll = geo[0]
+            self.yll = geo[3] - self.dx * self.ysz
+
+            self.noDataValue = f.GetRasterBand(1).GetNoDataValue()
+
+    def subArea(self,xmin,xmax,ymin,ymax):
+        new_grid=self.copy()
+
+        ximin=int((xmin-self.xll)/self.dx)
+        ximax=int((xmax-self.xll)/self.dx)
+        yimin=int((ymin-self.yll)/self.dx)
+        yimax=int((ymax-self.yll)/self.dx)
+
+        new_grid.xsz=ximax-ximin
+        new_grid.ysz=yimax-yimin
+        new_grid.xll=xmin
+        new_grid.yll=ymin
+
+        new_grid.grid=new_grid.grid[ximin:ximax,yimin:yimax]
+
+        return new_grid
+
+    def getPointValueXy(self,x,y):
+        i=int((x-self.xll)/self.dx)
+        j=int((y-self.yll)/self.dx)
+
+        if i>=0 and i<self.xsz and j>=0 and j<self.ysz:
+            return self.grid[i,j]
+        else:
+            return None
+
+    def save(self,fileName):
+        geotiffDriver=gdal.GetDriverByName("GTiff")
+
+        outputTIFF=geotiffDriver.Create(fileName,self.xsz,self.ysz,\
+            1,gdal.GDT_Float32,options=['COMPRESS=LZW'])
+        outputTIFF.SetGeoTransform([self.xll,self.dx,0,self.yll+self.ysz*self.dx,0,-self.dx])
+        outputTIFF.GetRasterBand(1).WriteArray(self.grid.transpose()[::-1,:])
+        outputTIFF.FlushCache()
+        geotiffDriver=None
+
+    def copy(self):
+        cp=geoGrid(None,self.xsz,self.ysz,self.xll,self.yll,self.dx)
+        cp.grid=self.grid.copy()
+
+        return cp
+
+
 def readPolylineShapefile(fileName):
     dataSource=ogr.Open(fileName)
     if dataSource is None:

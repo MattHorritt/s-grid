@@ -171,14 +171,14 @@ extern "C" void calcStorageParameters(float x0, float y0, float x1, float y1,
 	dtm.assign(xsz,ysz,dtmArg);
 
 	xi0=int((x0-xll)/dx);
-	xi1=int((x1-xll)/dx);
+	xi1=int((x1-xll)/dx)-1;
 	yi0=int((y0-yll)/dx);
-	yi1=int((y1-yll)/dx);
+	yi1=int((y1-yll)/dx)-1;
 
 	for(i=xi0;i<=xi1;i++) for(j=yi0;j<=yi1;j++)
     {
         countAll++;
-        if(dtm(i,j)!=noDataValue)
+        if(dtm(i,j) != -9999)
         	{
         		zMin=MIN(zMin,dtm(i,j));
         		zMax=MAX(zMax,dtm(i,j));
@@ -186,23 +186,6 @@ extern "C" void calcStorageParameters(float x0, float y0, float x1, float y1,
                 countNnd++;
         	}
     }
-
-    if((countNnd/float(countAll))<0.5)
-    {
-       	*(retArray)=noDataValue;
-       	*(retArray+1)=noDataValue;
-       	*(retArray+2)=noDataValue;
-       	*(retArray+3)=noDataValue;
-       	*(retArray+4)=noDataValue;
-       	*(retArray+5)=noDataValue;
-       	*(retArray+6)=noDataValue;
-
-//       	*(retArray+7)=noDataValue;
-
-            return;
-    }
-
-
 
     if(channel)
     {
@@ -263,6 +246,8 @@ extern "C" void calcStorageParameters(float x0, float y0, float x1, float y1,
         }
 
 
+        printf("1: %f %f\n", zMin, zMax);
+
         volIP=new float[5];
         volIP[0]=0.;
 
@@ -304,7 +289,7 @@ extern "C" void calcStorageParameters(float x0, float y0, float x1, float y1,
     {
         	wlList=new float[4];
 
-        	if(zMax>(zMin+5) && zMax>(zMin+1))
+        	if(zMax>(zMin+5))
         	{
         		wlList[0]=zMin;
         		wlList[1]=zMin+1;
@@ -339,8 +324,6 @@ extern "C" void calcStorageParameters(float x0, float y0, float x1, float y1,
         	*(retArray+3)=volIP[2];
         	*(retArray+4)=volIP[3];
     }
-
-
 
 
 	return;
@@ -412,7 +395,7 @@ extern "C" void conveyanceParameters(int xi0, int yi0, int xi1, int yi1,
     profileLength = 0;
 	for(;;)
 	{
-	    if(!isnan(dtm(xi0,yi0)))
+	    if(dtm(xi0,yi0) != noDataValue)
 	    {
 
             profile[pptr]=dtm(xi0,yi0);
