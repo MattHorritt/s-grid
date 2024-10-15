@@ -13,8 +13,12 @@ from subprocess import call
 import reservoirs
 import shapely, shapely.wkb
 from osgeo import ogr
+from multiprocessing.dummy import Pool as ThreadPool
+from itertools import product
 
-
+from multiprocessing import set_start_method
+from osgeo import gdal
+from copy import deepcopy
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 arrayType=numpy.float64
@@ -466,6 +470,25 @@ def vectors_intersect(l1, p2):
     return False
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Wrapper for processCell so we can pass single argument tuple for threading.
+# Bit of a hack - but works.
+def processCellWrapper(argTuple):
+    print(f"In processCellWrapper processing cell [{argTuple[0]},{argTuple[1]}]...")
+
+    dtm = fileIO.geoGrid(argTuple[5], objOnly = True)
+
+
+    retTuple = processCell(argTuple[0], argTuple[1], argTuple[2],
+                argTuple[3], argTuple[4], dtm,
+                argTuple[6], argTuple[7], argTuple[8],
+                nFileObj = argTuple[9], clipLyr = argTuple[10], rvs = argTuple[11])
+    # except:
+    #     retTuple =     (numpy.zeros(7,dtype=arrayType) - 9999,
+    #                     numpy.zeros(7,dtype=arrayType) - 9999,
+    #                     numpy.zeros(5,dtype=arrayType) - 9999)
+
+    return retTuple
+
 def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, nFileObj = None, clipLyr = None, rvs = None):
     # These are the square extents in map coordinates
     x0 = xll + i * cellSize
@@ -600,17 +623,49 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     else:
         tickerStep=1
 
-    for i in range(xsz):
-        if (ticker%tickerStep)==0: print("%i%% ..."%(100.*ticker/xsz), end='')
-        sys.stdout.flush()
-        ticker+=1
-        for j in range(ysz):
-            cX, cY, st = processCell(i, j, xll, yll, cellSize, dtm, nFP, conveyanceFunc, storageFunc,
-                                     clipLyr = clipRasterPolyLayer, rvs = rvs)
+    if threads is None:
+        for i in range(xsz):
+            if (ticker%tickerStep)==0: print("%i%% ..."%(100.*ticker/xsz), end='')
+            sys.stdout.flush()
+            ticker+=1
+            for j in range(ysz):
+                cX, cY, st = processCell(i, j, xll, yll, cellSize, dtm, nFP, conveyanceFunc, storageFunc,
+                                         clipLyr = clipRasterPolyLayer, rvs = rvs)
 
-            convParX[i, j, :] = cX
-            convParY[i, j, :] = cY
-            storagePar[i, j, :] = st
+                convParX[i, j, :] = cX
+                convParY[i, j, :] = cY
+                storagePar[i, j, :] = st
+    else:
+        # set_start_method('spawn')
+
+        pool = ThreadPool(4)
+        funcArgList = []
+        returnValues = []
+        for i, j in product(range(xsz), range(ysz)):
+            funcArgList.append((i, j, xll, yll, cellSize, dtmFileName, nFP, conveyanceFunc, storageFunc,
+                                         None, clipRasterPolyLayer, rvs))
+
+        # for fArgs in funcArgList:
+        #     returnValues.append(processCellWrapper(fArgs))
+
+        returnValues = pool.map(processCellWrapper, funcArgList)
+
+
+        for av, rv in zip(funcArgList, returnValues):
+            i = av[0]
+            j = av[1]
+            convParX[i, j, :] = rv[0]
+            convParY[i, j, :] = rv[1]
+            storagePar[i, j, :] = rv[2]
+
+        # processCell(argTuple[0], argTuple[1], argTuple[2],
+        #             argTuple[3], argTuple[4], argTuple[5],
+        #             argTuple[6], argTuple[7], argTuple[8],
+        #             nFileObj=argTuple[9], clipLyr=argTuple[10], rvs=argTuple[11])
+
+
+        pass
+
 
     print("Done.")
 
