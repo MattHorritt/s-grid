@@ -15,10 +15,7 @@ import shapely, shapely.wkb
 from osgeo import ogr
 from multiprocessing.dummy import Pool as ThreadPool
 from itertools import product
-
-from multiprocessing import set_start_method
-from osgeo import gdal
-from copy import deepcopy
+import time
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 arrayType=numpy.float64
@@ -636,8 +633,6 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
                 convParY[i, j, :] = cY
                 storagePar[i, j, :] = st
     else:
-        # set_start_method('spawn')
-
         pool = ThreadPool(threads)
         funcArgList = []
         returnValues = []
@@ -645,18 +640,29 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
             funcArgList.append((i, j, xll, yll, cellSize, dtmFileName, nFP, conveyanceFunc, storageFunc,
                                          None, clipRasterPolyLayer, rvs))
 
-        # for fArgs in funcArgList:
-        #     returnValues.append(processCellWrapper(fArgs))
-
         counter = 0
 
         tickerStep=int(xsz * ysz / 100)
         ticker = 0
 
+        t1 = time.time()
+
         for arg, ret in pool.imap(processCellWrapper, funcArgList, chunksize=10):
 
-            if (ticker%tickerStep)==0: print("%i%% ..."%(100.*ticker/(xsz * ysz)), end='')
-            sys.stdout.flush()
+            if (ticker%tickerStep)==0:
+                print("%i%% "%(100.*ticker/(xsz * ysz)), end='')
+
+                if ticker > 0:
+                    pcComplete = float(ticker) / (xsz * ysz)
+                    pcToGo = 1. - pcComplete
+                    t2 = time.time() - t1
+                    projectedFinish = time.time() + pcToGo * (t2 / pcComplete)
+                    projectedFinishString = time.strftime("%H:%M:%S", time.localtime(projectedFinish))
+                    print(projectedFinishString, end='')
+
+                print("...", end='')
+                sys.stdout.flush()
+
             ticker += 1
 
             i = arg[0]
@@ -664,8 +670,6 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
             convParX[i, j, :] = ret[0]
             convParY[i, j, :] = ret[1]
             storagePar[i, j, :] = ret[2]
-
-
 
         pass
 
