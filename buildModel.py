@@ -4,7 +4,7 @@
 # CONTROL PANEL
 
 # Topography
-dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range.tif"
+dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/OS Panorama 50m clip range.tif"
 clipPolyName="/merlin1/Projects/LTIS SLR/GIS/England_buffer.gpkg:1km" # Provide polygon to clip catchment etc
 useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access for large grids
 
@@ -15,25 +15,22 @@ replacement_values = {-10:20, 20:20}
 addNullEdges=False
 
 # Extent and resolution of model
-# xll=80000.    # Lower left corner
-# yll=3000.
+xll=80000.    # Lower left corner
+yll=0.
 cellSize=1000.
+xsz=600
+ysz=700
 
-xll = 220000.
-yll = 46000.
-
-xsz=50
-ysz=50
-# xsz=600
-# ysz=700
+threads = None
 
 # Manning's n
 nFloodplain=0.06    # Can omit this if grid data supplied
 nFloodplainFile=None # Raster file of roughness, with same size/res as DTM
 
 # Output options
-outputFile="./params.pck"
-gridFileName="grid.csv"
+outputPrefix = '50m_'
+outputFile= outputPrefix+"params.pck"
+gridFileName=outputPrefix+"grid.csv"
 
 ###############################################################################
 
@@ -83,7 +80,7 @@ convParX, convParY, storagePar=sgrid.gridFlowSetupTiled(tmpDtmFileName,\
     xll, yll, cellSize, xsz, ysz, nChannel, nFloodplain, \
     nFileName=nFloodplainFile,
     rvs = replacement_values,conveyanceFunc=cppConveyanceParameters,\
-    storageFunc=cppCalcStorageParameters,outputPrefix='', clipRasterPoly=clipPolyName, threads = 10)
+    storageFunc=cppCalcStorageParameters,outputPrefix=outputPrefix, clipRasterPoly=clipPolyName, threads = threads)
 
 if useTempTopoFile:
     os.remove(tmpDtmFileName)

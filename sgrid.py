@@ -620,11 +620,28 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     else:
         tickerStep=1
 
+    t1 = time.time()
+
     if threads is None:
+
         for i in range(xsz):
-            if (ticker%tickerStep)==0: print("%i%% ..."%(100.*ticker/xsz), end='')
-            sys.stdout.flush()
-            ticker+=1
+
+            if (ticker%tickerStep)==0:
+                print("%i%% "%(100.*ticker/xsz), end='')
+
+                if ticker > 0:
+                    pcComplete = float(ticker) / xsz
+                    pcToGo = 1. - pcComplete
+                    t2 = time.time() - t1
+                    projectedFinish = time.time() + pcToGo * (t2 / pcComplete)
+                    projectedFinishString = time.strftime("%H:%M:%S", time.localtime(projectedFinish))
+                    print(projectedFinishString, end='')
+
+                print("...", end='')
+                sys.stdout.flush()
+
+            ticker += 1
+
             for j in range(ysz):
                 cX, cY, st = processCell(i, j, xll, yll, cellSize, dtm, nFP, conveyanceFunc, storageFunc,
                                          clipLyr = clipRasterPolyLayer, rvs = rvs)
@@ -644,8 +661,6 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
         tickerStep=int(xsz * ysz / 100)
         ticker = 0
-
-        t1 = time.time()
 
         for arg, ret in pool.imap(processCellWrapper, funcArgList, chunksize=10):
 
