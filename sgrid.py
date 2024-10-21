@@ -16,6 +16,7 @@ from osgeo import ogr
 from multiprocessing.dummy import Pool as ThreadPool
 from itertools import product
 import time
+from pathlib import Path
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 arrayType=numpy.float64
@@ -474,11 +475,11 @@ def processCellWrapper(argTuple):
 
     dtm = fileIO.geoGrid(argTuple[5], objOnly = True)
 
-
     retTuple = processCell(argTuple[0], argTuple[1], argTuple[2],
                 argTuple[3], argTuple[4], dtm,
                 argTuple[6], argTuple[7], argTuple[8],
-                nFileObj = argTuple[9], clipLyr = argTuple[10], rvs = argTuple[11])
+                nFileObj = argTuple[9], clipLyr = argTuple[10], rvs = argTuple[11],
+                saveDtmTiles = argTuple[12])
     # except:
     #     retTuple =     (numpy.zeros(7,dtype=arrayType) - 9999,
     #                     numpy.zeros(7,dtype=arrayType) - 9999,
@@ -486,7 +487,8 @@ def processCellWrapper(argTuple):
 
     return argTuple, retTuple # Return arguments as well - useful for tracking the results
 
-def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, nFileObj = None, clipLyr = None, rvs = None):
+def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, nFileObj = None, clipLyr = None,
+                rvs = None, saveDtmTiles = None):
     # These are the square extents in map coordinates
     x0 = xll + i * cellSize
     x1 = x0 + cellSize
@@ -534,6 +536,22 @@ def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, 
             if not vectors_intersect(clipLyr, sq):
                 return conveyanceValuesX, conveyanceValuesY, storageValues
 
+        # Save tile
+        if saveDtmTiles:
+            if '.' in dtm.fileName:
+                tileRoot = dtm.fileName.split('.')[0]
+            else:
+                tileRoot = dtm.fileName
+
+            tileRoot += '_tiles'
+
+            # If folder doesn't exist, create it
+            Path(tileRoot).mkdir(parents=True, exist_ok=True)
+
+            fileName = Path(tileRoot) / f"{i:03d}_{j:03d}.tif"
+            tile = fileIO.geoGrid(dtmWindow, windowXsz, windowYsz, x0, y0, dtm.dx)
+            tile.save(str(fileName))
+
         # And get landcover window
         if nFileObj is not None:
             nWindow = nFileObj.ReadAsArray(xoff=xi0, yoff=dtm.ysz - yi1, xsize=windowXsz,
@@ -573,7 +591,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     nFileName=None,
     plotNamePrefix=None, outputPrefix=None,
     rvs=None,ndr=None,conveyanceFunc=None,storageFunc=None,
-    clipRasterPoly = None, threads = None):
+    clipRasterPoly = None, threads = None, saveDtmTiles = None):
 
     if plotNamePrefix is None:
         plotNamePrefix=""
@@ -595,6 +613,8 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
             raise ValueError("Can't open clip polygon")
 
         clipRasterPolyLayer.ResetReading()
+    else:
+        clipRasterPolyLayer = None
 
     # dtmFileObj,dtmCellSize,dtmXsz,dtmYsz,dtmXll,dtmYll=fileIO.readScalarGridObj(dtmFileName)
     dtm = fileIO.geoGrid(dtmFileName, objOnly = True)
@@ -644,7 +664,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
             for j in range(ysz):
                 cX, cY, st = processCell(i, j, xll, yll, cellSize, dtm, nFP, conveyanceFunc, storageFunc,
-                                         clipLyr = clipRasterPolyLayer, rvs = rvs)
+                                         clipLyr = clipRasterPolyLayer, rvs = rvs, saveDtmTiles = saveDtmTiles)
 
                 convParX[i, j, :] = cX
                 convParY[i, j, :] = cY
@@ -655,7 +675,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
         returnValues = []
         for i, j in product(range(xsz), range(ysz)):
             funcArgList.append((i, j, xll, yll, cellSize, dtmFileName, nFP, conveyanceFunc, storageFunc,
-                                         None, clipRasterPolyLayer, rvs))
+                                         None, clipRasterPolyLayer, rvs, saveDtmTiles))
 
         counter = 0
 

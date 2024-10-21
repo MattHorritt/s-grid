@@ -31,6 +31,7 @@ nFloodplainFile=None # Raster file of roughness, with same size/res as DTM
 outputPrefix = '50m_'
 outputFile= outputPrefix+"params.pck"
 gridFileName=outputPrefix+"grid.csv"
+saveDtmTiles = True
 
 ###############################################################################
 
@@ -80,7 +81,8 @@ convParX, convParY, storagePar=sgrid.gridFlowSetupTiled(tmpDtmFileName,\
     xll, yll, cellSize, xsz, ysz, nChannel, nFloodplain, \
     nFileName=nFloodplainFile,
     rvs = replacement_values,conveyanceFunc=cppConveyanceParameters,\
-    storageFunc=cppCalcStorageParameters,outputPrefix=outputPrefix, clipRasterPoly=clipPolyName, threads = threads)
+    storageFunc=cppCalcStorageParameters,outputPrefix=outputPrefix, clipRasterPoly=clipPolyName,
+    threads = threads, saveDtmTiles=saveDtmTiles)
 
 if useTempTopoFile:
     os.remove(tmpDtmFileName)

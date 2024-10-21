@@ -24,6 +24,8 @@ class geoGrid:
         elif len(args)==1:
             f=gdal.Open(args[0])
 
+            self.fileName = args[0]
+
             if "objOnly" in kwargs and kwargs["objOnly"]:
                 self.obj = f
             else:
