@@ -90,12 +90,17 @@ class geoGrid:
         return cp
 
 
-def readPolylineShapefile(fileName):
+def readPolylineShapefile(fileName,layerName=None):
     dataSource=ogr.Open(fileName)
     if dataSource is None:
         return None
 
-    layer=dataSource.GetLayerByIndex(0)
+    if layerName is None:
+        layer=dataSource.GetLayerByIndex(0)
+    else:
+        layer=dataSource.GetLayer(layerName)
+
+
     layer.ResetReading()
 
     layerDefn=layer.GetLayerDefn()
@@ -110,10 +115,14 @@ def readPolylineShapefile(fileName):
         xl=[]
         yl=[]
         geom=feature.GetGeometryRef()
-        for i in range(geom.GetPointCount()):
-            pt=geom.GetPoint(i)
-            xl.append(pt[0])
-            yl.append(pt[1])
+
+        for gr in range(geom.GetGeometryCount()):
+            g=geom.GetGeometryRef(gr)
+
+            for i in range(g.GetPointCount()):
+                pt=g.GetPoint(i)
+                xl.append(pt[0])
+                yl.append(pt[1])
 
         tmpDict={}
         for fn in fieldNames:

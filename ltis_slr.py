@@ -4,6 +4,7 @@
 import sgrid
 import fileIO
 import numpy as np
+from pathlib import Path
 
 # Some useful constants
 minWaveHeight = 0.2  # Height required above toe level required to damage defence
@@ -14,8 +15,8 @@ tidePeriod = 12.42  # Period between high tides
 # Read defence polyline, identify defences at risk of erosion, and generate
 # points as list of (i, j, t1, t200) tuples. Also save to CSV as diagnostic.
 def slr_tide_points(slr, defenceLineStr, xll, yll, xsz, ysz, cellSize, outputDirectory, outputPrefix, layerName=None):
-    tidePointsCsvFile = open(outputDirectory + outputPrefix + '_tidePoints.csv', "w")
-    tidePointsCsvFile.write("X,Y,T1,T200,ToeLevel\n")
+    tidePointsCsvFile = open(str(Path(outputDirectory)/ (outputPrefix + '_tidePoints.csv')), "w")
+    tidePointsCsvFile.write("X,Y,XC,YC,T1,T200,ToeLevel\n")
 
     xyiList = []
 
@@ -57,7 +58,11 @@ def slr_tide_points(slr, defenceLineStr, xll, yll, xsz, ysz, cellSize, outputDir
                         tidePoints.append((xi, yi, t1, t200))
                         xyiList.append((xi, yi))
 
-                        tidePointsCsvFile.write("%f,%f,%f,%f,%f\n" % (x, y, t1, t200, toeLevel))
+                        # Save centres of cells too
+                        xc = xll + xi * cellSize + cellSize / 2
+                        yc = yll + yi * cellSize + cellSize / 2
+
+                        tidePointsCsvFile.write("%f,%f,%f,%f,%f,%f,%f\n" % (x, y, xc, yc, t1, t200, toeLevel))
 
     tidePointsCsvFile.close()
 

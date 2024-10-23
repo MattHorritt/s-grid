@@ -2,9 +2,9 @@
 
 #############################################################################
 # Control Panel
-parametersFile="params.pck" # Output from buildModel.py
+parametersFile="50m_params.pck" # Output from buildModel.py
 
-outputDirectory="results" # Folder for results
+outputDirectory="50m_results" # Folder for results
 outputPrefix="output"  # Filename for results is based on this
 
 # Rainfall information and length of simulation - in hours
@@ -16,34 +16,22 @@ rainfallDepth=0. # In mm
 initialWlFile=None  # This can be used to specify initial water depths from a
                     # csv file output by a previos run - use None to turn off
 
-initialWL = 2.0
+initialWL = 0.0
 
 pcRunoff=100.       # Percentage runoff
 
 saveMax=True # Set to true to save max water levels, flows etc
 saveEnd=True # Set to true to save final water levels, flows etc
 
-# Water level boundary conditions
-wlShp="Test 1 - Planar slope/wlBCs.shp" # Water level BCs in shapefile - steady state only - use None to turn off
-wlAttr='wl'              # Attribute holding water level
-
-# Flow points - shapefile of points with flow value in flowAttr attribute
-flowPointsShp='Test 1 - Planar slope/flowBCs.shp'
-flowAttr='flow'
-flowMultiplier=1.0 # Easy way to adjust all values by this factor
-
 # Baseflow - useful for groundwater contributions etc
 baseFlow=0.0 # in m3/s/km2, introduced into all cells
-
-# Initial conditions
-initialWL=None   # Initial water level applied everywhere - use None to turn off
 
 initialTimeStep=30.  # Time step at start of run
 minTimeStep=30.
 maxTimeStep=3600.
 
 seaLevelRise = 0.0
-defenceLineStr = r"PG: dbname=ltis2025 active_schema=slr user=postgres password=postgres"
+defenceLineStr = r"PG: host=localhost dbname=ltis2025 active_schema=slr user=postgres password=postgres"
 layerName = "defence_toe_levels"
 # See comment "Add rainfall" for where to edit rainfall/runoff code
 # See comment "Apply water level boundary" for where to edit water level boundary conditions
