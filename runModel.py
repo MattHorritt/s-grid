@@ -10,7 +10,7 @@ outputPrefix="output"  # Filename for results is based on this
 # Rainfall information and length of simulation - in hours
 rainfallDuration=0.
 rainfallStart=0.
-duration=120
+duration=31.05 # Takes us to ebb tide after first peak
 rainfallDepth=0. # In mm
 
 initialWlFile=None  # This can be used to specify initial water depths from a
@@ -42,6 +42,9 @@ initialTimeStep=30.  # Time step at start of run
 minTimeStep=30.
 maxTimeStep=3600.
 
+seaLevelRise = 0.0
+defenceLineStr = r"PG: dbname=ltis2025 active_schema=slr user=postgres password=postgres"
+layerName = "defence_toe_levels"
 # See comment "Add rainfall" for where to edit rainfall/runoff code
 # See comment "Apply water level boundary" for where to edit water level boundary conditions
 # See comment "Modify flow boundary" for where to edit flow boundary conditions
@@ -55,6 +58,7 @@ import time
 import os
 
 import sgrid
+import ltis_slr
 import fileIO
 
 # Path to C++ library
@@ -128,73 +132,15 @@ dryThresh=0.1
 
 print("Initial Volume=%e"%volGrid.sum())
 
-# Read sources and process
-if flowPointsShp is not None:
-    flowPointsRaw=fileIO.readPointShapefile(flowPointsShp)
+# Tide level points for LTIS SLR
+wlPoints = ltis_slr.slr_tide_points(seaLevelRise, defenceLineStr, xll, yll, xsz, ysz, cellSize,
+                                    outputDirectory, outputPrefix, layerName = layerName)
 
-    flowPoints=[]
-    flowPointsN=0
-    for p in flowPointsRaw:
-        xi=int((p[0]-xll)/cellSize)
-        yi=int((p[1]-yll)/cellSize)
-        qi=p[2][flowAttr]*flowMultiplier
-
-        if xi>=0 and xi<xsz and yi>=0 and yi<ysz:
-            flowPointsN+=1
-            flowPoints.append((xi,yi,qi))
-
-    if flowPointsN>0:
-        flowPointsXi=numpy.zeros(flowPointsN,dtype=numpy.int32)
-        flowPointsYi=numpy.zeros(flowPointsN,dtype=numpy.int32)
-        flowPointsQ=numpy.zeros(flowPointsN,dtype=arrayType)
-
-        for i in range(flowPointsN):
-            flowPointsXi[i]=flowPoints[i][0]
-            flowPointsYi[i]=flowPoints[i][1]
-            flowPointsQ[i]=flowPoints[i][2]
-
-else: # Null
-    flowPoints=None
-    flowPointsN=0
-    flowPointsXi=numpy.array([0],dtype=numpy.int32)
-    flowPointsYi=numpy.array([0],dtype=numpy.int32)
-    flowPointsQ=numpy.array([0],dtype=arrayType)
-
-# Read downstream BCs and process
-if wlShp is not None:
-    bcPointsRaw=fileIO.readPolylineShapefile(wlShp)
-    nl=len(bcPointsRaw)
-    wlPoints=[]
-    wlPointsN=0
-    for i in range(nl):
-        xl=bcPointsRaw[i][0]
-        yl=bcPointsRaw[i][1]
-        wl=bcPointsRaw[i][2][wlAttr]
-
-        for j in range(len(xl)-1):
-            x1=xl[j]
-            y1=yl[j]
-            x2=xl[j+1]
-            y2=yl[j+1]
-
-            segmentLength=numpy.sqrt((x2-x1)**2+(y2-y1)**2)
-            nSteps=int(2*segmentLength/cellSize)
-
-            for k in range(nSteps):
-                x=x1+(x2-x1)*k/nSteps
-                y=y1+(y2-y1)*k/nSteps
-
-                xi=int((x-xll)/cellSize)
-                yi=int((y-yll)/cellSize)
-
-                if xi>=0 and xi<xsz and yi>=0 and yi<ysz:
-                    if (xi,yi,wl) not in wlPoints:
-                        wlPointsN+=1
-                        wlPoints.append((xi,yi,wl))
-else:
-    wlPointsN=0
-    wlPoints=[]
-
+# Some dummy arrays because we have no flow points
+flowPointsN=0
+flowPointsXi=numpy.array([0],dtype=numpy.int32)
+flowPointsYi=numpy.array([0],dtype=numpy.int32)
+flowPointsQ=numpy.array([0],dtype=arrayType)
 
 # Perform timesteps
 currentTime=0.
@@ -268,25 +214,12 @@ while currentTime<(duration*3600.):
 
     ############################################################################################
     # Apply water level boundary
-    # wlPoints is list of [i,j,wl] values processed from shapefile for entering into model grid
-    for wlPt in wlPoints:
-        if storagePar[wlPt[0],wlPt[1],0]==-9999: # This indicates NULL cell so do nothing
-            continue
+    Qin, Qout = ltis_slr.applyTideLevels(wlPoints, currentTime, timeStep, seaLevelRise,
+                             storagePar, wlGrid, volGrid)
 
-        wlGrid[wlPt[0],wlPt[1]]=wlPt[2] # Modify this for time varying boundary conditions
-
-        newV=sgrid.volFromWl(wlPt[2],wlPt[0],wlPt[1],storagePar,cellSize)
-        Qout+=(volGrid[wlPt[0],wlPt[1]]-newV)/timeStep
-
-        volGrid[wlPt[0],wlPt[1]]=newV
     ############################################################################################
 
-
-
-    Qin=sum(flowPointsQ)+baseFlow*nNonNullCells
-
-
-# Track maximum volumes
+    # Track maximum volumes
     if (currentTime/3600.)>=rainfallDuration:
         cppMaxVolGrid(volGrid,maxVolGrid,flowX,maxFlowX,flowY,maxFlowY,xsz,ysz)
 
