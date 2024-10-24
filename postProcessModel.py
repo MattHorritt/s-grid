@@ -14,7 +14,7 @@ noDataReplacement=None
 
 # Folder and first part of filename where CSV outputs from buildModel are stored
 resultsDirectory="50m_results"
-resultsPrefix="output"
+resultsPrefix="output_slr1.0_rp200"
 
 processMax=True # Set to true to save max water levels, flows etc
 processEnd=True # Set to true to save final water levels, flows etc

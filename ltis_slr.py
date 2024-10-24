@@ -14,7 +14,7 @@ tidePeriod = 12.42  # Period between high tides
 ###############################################################################
 # Read defence polyline, identify defences at risk of erosion, and generate
 # points as list of (i, j, t1, t200) tuples. Also save to CSV as diagnostic.
-def slr_tide_points(slr, defenceLineStr, xll, yll, xsz, ysz, cellSize, outputDirectory, outputPrefix, layerName=None):
+def slr_tide_points(slr, returnPeriod, defenceLineStr, xll, yll, xsz, ysz, cellSize, outputDirectory, outputPrefix, layerName=None):
     tidePointsCsvFile = open(str(Path(outputDirectory)/ (outputPrefix + '_tidePoints.csv')), "w")
     tidePointsCsvFile.write("X,Y,XC,YC,T1,T200,ToeLevel\n")
 
@@ -29,7 +29,7 @@ def slr_tide_points(slr, defenceLineStr, xll, yll, xsz, ysz, cellSize, outputDir
         yl = tidePointsRaw[i][1]
 
         t1 = tidePointsRaw[i][2]["t1"]
-        t200 = tidePointsRaw[i][2]["t200"]
+        t200 = tidePointsRaw[i][2][f"t{returnPeriod:.0f}"]
 
         toeLevel = tidePointsRaw[i][2]["toe_level_avg"]
 

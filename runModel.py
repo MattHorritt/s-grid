@@ -1,11 +1,18 @@
 #!/usr/bin/python
 
+import sys
+
 #############################################################################
 # Control Panel
+
+# Get return period and SLR from arguments
+seaLevelRise = float(sys.argv[1])
+returnPeriod = float(sys.argv[2])
+
 parametersFile="50m_params.pck" # Output from buildModel.py
 
 outputDirectory="50m_results" # Folder for results
-outputPrefix="output"  # Filename for results is based on this
+outputPrefix=f"output_slr{seaLevelRise:.1f}_rp{returnPeriod:.0f}"  # Filename for results is based on return period and sea level
 
 # Rainfall information and length of simulation - in hours
 rainfallDuration=0.
@@ -121,7 +128,7 @@ dryThresh=0.1
 print("Initial Volume=%e"%volGrid.sum())
 
 # Tide level points for LTIS SLR
-wlPoints = ltis_slr.slr_tide_points(seaLevelRise, defenceLineStr, xll, yll, xsz, ysz, cellSize,
+wlPoints = ltis_slr.slr_tide_points(seaLevelRise, returnPeriod, defenceLineStr, xll, yll, xsz, ysz, cellSize,
                                     outputDirectory, outputPrefix, layerName = layerName)
 
 # Some dummy arrays because we have no flow points
