@@ -72,7 +72,7 @@ def slr_tide_points(slr, defenceLineStr, xll, yll, xsz, ysz, cellSize, outputDir
 ###############################################################################
 # Calculate tide level across multiple high tides; peak is applied to 2nd high
 # tide.
-def applyTideLevels(tidePoints, t, dt, slr, storagePar, wlGrid, volGrid):
+def applyTideLevels(tidePoints, t, dt, slr, storagePar, wlGrid, volGrid, cellSize):
     # For tracking flows in and out
     Qin = 0.
     Qout = 0.
@@ -91,7 +91,7 @@ def applyTideLevels(tidePoints, t, dt, slr, storagePar, wlGrid, volGrid):
         wl += slr
 
         wlGrid[tidePt[0], tidePt[1]] = wl
-        newV = sgrid.volFromWl(wl, tidePt[0], tidePt[1], storagePar)
+        newV = sgrid.volFromWl(wl, tidePt[0], tidePt[1], storagePar, cellSize)
 
         Qtide = (newV - volGrid[tidePt[0], tidePt[1]]) / dt
 

@@ -203,7 +203,7 @@ while currentTime<(duration*3600.):
     ############################################################################################
     # Apply water level boundary
     Qin, Qout = ltis_slr.applyTideLevels(wlPoints, currentTime, timeStep, seaLevelRise,
-                             storagePar, wlGrid, volGrid)
+                             storagePar, wlGrid, volGrid, cellSize)
 
     ############################################################################################
 
