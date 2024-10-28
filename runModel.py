@@ -12,7 +12,10 @@ returnPeriod = float(sys.argv[2])
 parametersFile="50m_params.pck" # Output from buildModel.py
 
 outputDirectory="50m_results" # Folder for results
-outputPrefix=f"output_slr{seaLevelRise:.1f}_rp{returnPeriod:.0f}"  # Filename for results is based on return period and sea level
+
+slrStr = f"{seaLevelRise:.1f}"
+slrStr = slrStr.replace('.', 'p')
+outputPrefix=f"output_slr{slrStr}_rp{returnPeriod:.0f}"  # Filename for results is based on return period and sea level
 
 # Rainfall information and length of simulation - in hours
 rainfallDuration=0.
