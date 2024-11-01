@@ -649,7 +649,8 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
             for j in range(ysz):
 
                 if (ticker%tickerStep)==0 or True:
-                    print("%0.0f%% "%(100.*ticker/(xsz * ysz)), end='')
+                    pc = int(100.*ticker/(xsz * ysz))
+                    print(f"{pc}%% {i}/{xsz},{j}/{ysz} "%(), end='')
 
                     if ticker > 0:
                         pcComplete = float(ticker) / (xsz * ysz)
@@ -664,7 +665,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
                         print(projectedFinishString, end='')
 
-                    print("...", end='')
+                    print("...", end='\r', flush=True)
                     sys.stdout.flush()
 
                 ticker += 1
