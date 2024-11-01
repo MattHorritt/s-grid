@@ -460,8 +460,21 @@ def vectors_intersect(l1, p2):
         g1 = f1.GetGeometryRef()
         p1 = shapely.wkb.loads(bytes(g1.ExportToIsoWkb()))
 
-        if p1.intersects(p2):
-            return True
+        e1 = shapely.envelope(p1).bounds
+        x11 = e1[0]
+        x12 = e1[2]
+        y11 = e1[1]
+        y12 = e1[3]
+
+        e2 = shapely.envelope(p2).bounds
+        x21 = e2[0]
+        x22 = e2[2]
+        y21 = e2[1]
+        y22 = e2[3]
+
+        if x12 >= x21 and x11 <= x22 and y12 >= y21 and y11 <= y22:
+            if p1.intersects(p2):
+                return True
 
         f1 = l1.GetNextFeature()
 
@@ -488,7 +501,7 @@ def processCellWrapper(argTuple):
     return argTuple, retTuple # Return arguments as well - useful for tracking the results
 
 def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, nFileObj = None, clipLyr = None,
-                rvs = None, saveDtmTiles = None):
+                rvs = None, saveDtmTiles = None, maskGrid = None):
     # These are the square extents in map coordinates
     x0 = xll + i * cellSize
     x1 = x0 + cellSize
@@ -510,6 +523,13 @@ def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, 
     windowYsz = yi1 - yi0 + 1
 
     if xi0 >= 0 and xi1 <= dtm.xsz - 1 and yi0 >= 0 and yi1 <= dtm.ysz - 1:  # Within DTM extent - grab window
+
+        if maskGrid is not None:
+            xc = 0.5 * (x0 + x1)
+            yc = 0.5 * (y0 + y1)
+            if maskGrid.getPointValueXy(xc, yc) == 0:
+                return conveyanceValuesX, conveyanceValuesY, storageValues
+
         dtmWindow = dtm.obj.ReadAsArray(xoff=xi0, yoff=dtm.ysz - 1 - yi1, xsize=windowXsz,
                                            ysize=windowYsz).transpose().copy()
         dtmWindow = numpy.array(dtmWindow[:, ::-1], arrayType)
@@ -520,7 +540,8 @@ def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, 
         # Replace values according to replacement values dict
         if rvs is not None:
             for v1, v2 in rvs.items():
-                dtmWindow[numpy.where(dtmWindow == v1)] = v2
+                if v1 != v2:
+                    dtmWindow[numpy.where(dtmWindow == v1)] = v2
 
         # Decide whether to include this cell - if all NaNs, or all replacement values, skip
         if numpy.all(dtmWindow == -9999):
@@ -592,7 +613,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     nFileName=None,
     plotNamePrefix=None, outputPrefix=None,
     rvs=None,ndr=None,conveyanceFunc=None,storageFunc=None,
-    clipRasterPoly = None, threads = None, saveDtmTiles = None):
+    clipRasterPoly = None, threads = None, saveDtmTiles = None, maskGridName = None):
 
     if plotNamePrefix is None:
         plotNamePrefix=""
@@ -620,6 +641,11 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     # dtmFileObj,dtmCellSize,dtmXsz,dtmYsz,dtmXll,dtmYll=fileIO.readScalarGridObj(dtmFileName)
     dtm = fileIO.geoGrid(dtmFileName, objOnly = True)
     # fileNdv = dtmFileObj.GetRasterBand(1).GetNoDataValue()
+
+    if maskGridName is not None:
+        maskGrid = fileIO.geoGrid(maskGridName)
+    else:
+        maskGrid = None
 
     if nFileName is not None:
         nFileObj,lcCellSize,lcXsz,lcYsz,lcXll,lcYll=fileIO.readScalarGridObj(nFileName)
@@ -672,7 +698,8 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
 
                 cX, cY, st = processCell(i, j, xll, yll, cellSize, dtm, nFP, conveyanceFunc, storageFunc,
-                                         clipLyr = clipRasterPolyLayer, rvs = rvs, saveDtmTiles = saveDtmTiles)
+                                         clipLyr = clipRasterPolyLayer, rvs = rvs, saveDtmTiles = saveDtmTiles,
+                                         maskGrid = maskGrid)
 
                 convParX[i, j, :] = cX
                 convParY[i, j, :] = cY

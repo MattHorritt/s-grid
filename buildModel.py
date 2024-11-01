@@ -5,11 +5,12 @@
 
 # Topography
 dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range.tif"
-clipPolyName="/merlin1/Projects/LTIS SLR/GIS/England_buffer.gpkg:1km" # Provide polygon to clip catchment etc
+clipPolyName=r"/merlin1/Projects/LTIS SLR/GIS/England_buffer.gpkg:1km" # Provide polygon to clip catchment etc
+maskGridName=r"/merlin1/Projects/LTIS SLR/GIS/mask_1km.tif"
 useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access for large grids
 
 # These values can be used to replace NULLs (e.g. at sea) with sensible values
-replacement_values = None # {-10:20, 20:20}
+replacement_values = {-10:-10, 20:20}
 
 # Use this to add NULL cells around edge - allows water to fall out of model
 addNullEdges=False
@@ -82,7 +83,7 @@ convParX, convParY, storagePar=sgrid.gridFlowSetupTiled(tmpDtmFileName,\
     nFileName=nFloodplainFile,
     rvs = replacement_values,conveyanceFunc=cppConveyanceParameters,\
     storageFunc=cppCalcStorageParameters,outputPrefix=outputPrefix, clipRasterPoly=clipPolyName,
-    threads = threads, saveDtmTiles=saveDtmTiles)
+    threads = threads, saveDtmTiles=saveDtmTiles, maskGridName=maskGridName)
 
 if useTempTopoFile:
     os.remove(tmpDtmFileName)
