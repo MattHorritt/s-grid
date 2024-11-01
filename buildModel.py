@@ -22,7 +22,7 @@ cellSize=1000.
 xsz=600
 ysz=700
 
-threads = None
+threads = 12
 
 # Manning's n
 nFloodplain=0.06    # Can omit this if grid data supplied
@@ -82,7 +82,7 @@ convParX, convParY, storagePar=sgrid.gridFlowSetupTiled(tmpDtmFileName,\
     xll, yll, cellSize, xsz, ysz, nChannel, nFloodplain, \
     nFileName=nFloodplainFile,
     rvs = replacement_values,conveyanceFunc=cppConveyanceParameters,\
-    storageFunc=cppCalcStorageParameters,outputPrefix=outputPrefix, clipRasterPoly=clipPolyName,
+    storageFunc=cppCalcStorageParameters,outputPrefix=outputPrefix, clipRasterPolyName=clipPolyName,
     threads = threads, saveDtmTiles=saveDtmTiles, maskGridName=maskGridName)
 
 if useTempTopoFile:

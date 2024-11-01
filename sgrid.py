@@ -492,11 +492,7 @@ def processCellWrapper(argTuple):
                 argTuple[3], argTuple[4], dtm,
                 argTuple[6], argTuple[7], argTuple[8],
                 nFileObj = argTuple[9], clipLyr = argTuple[10], rvs = argTuple[11],
-                saveDtmTiles = argTuple[12])
-    # except:
-    #     retTuple =     (numpy.zeros(7,dtype=arrayType) - 9999,
-    #                     numpy.zeros(7,dtype=arrayType) - 9999,
-    #                     numpy.zeros(5,dtype=arrayType) - 9999)
+                saveDtmTiles = argTuple[12], maskGrid = argTuple[13])
 
     return argTuple, retTuple # Return arguments as well - useful for tracking the results
 
@@ -553,10 +549,26 @@ def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, 
 
         # Check if this square intersect clip polygon if given - this test is potentially slow - so do last
         if clipLyr is not None:
-            sq = shapely.Polygon([(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
+            if isinstance(clipLyr, str):
+                if ':' in clipLyr:
+                    fileName = clipLyr.split(':')[0]
+                    lyrName = clipLyr.split(':')[1]
+                    clipRasterPolyDataSource = ogr.Open(fileName)
+                    clipRasterPolyLayer = clipRasterPolyDataSource.GetLayer(lyrName)
+                else:
+                    clipRasterPolyDataSource = ogr.Open(clipLyr)
+                    clipRasterPolyLayer = clipRasterPolyDataSource.GetLayerByIndex(0)
 
-            if not vectors_intersect(clipLyr, sq):
-                return conveyanceValuesX, conveyanceValuesY, storageValues
+                sq = shapely.Polygon([(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
+
+                if not vectors_intersect(clipRasterPolyLayer, sq):
+                    return conveyanceValuesX, conveyanceValuesY, storageValues
+
+            else:
+                sq = shapely.Polygon([(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
+
+                if not vectors_intersect(clipLyr, sq):
+                    return conveyanceValuesX, conveyanceValuesY, storageValues
 
         # Save tile
         if saveDtmTiles:
@@ -613,7 +625,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     nFileName=None,
     plotNamePrefix=None, outputPrefix=None,
     rvs=None,ndr=None,conveyanceFunc=None,storageFunc=None,
-    clipRasterPoly = None, threads = None, saveDtmTiles = None, maskGridName = None):
+    clipRasterPolyName = None, threads = None, saveDtmTiles = None, maskGridName = None):
 
     if plotNamePrefix is None:
         plotNamePrefix=""
@@ -621,22 +633,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     if outputPrefix is None:
         outputPrefix=""
 
-    if clipRasterPoly is not None:
-        if ':' in clipRasterPoly:
-            fileName = clipRasterPoly.split(':')[0]
-            lyrName = clipRasterPoly.split(':')[1]
-            clipRasterPolyDataSource = ogr.Open(fileName)
-            clipRasterPolyLayer = clipRasterPolyDataSource.GetLayer(lyrName)
-        else:
-            clipRasterPolyDataSource = ogr.Open(clipRasterPoly)
-            clipRasterPolyLayer = clipRasterPolyDataSource.GetLayerByIndex(0)
 
-        if clipRasterPolyDataSource is None:
-            raise ValueError("Can't open clip polygon")
-
-        clipRasterPolyLayer.ResetReading()
-    else:
-        clipRasterPolyLayer = None
 
     # dtmFileObj,dtmCellSize,dtmXsz,dtmYsz,dtmXll,dtmYll=fileIO.readScalarGridObj(dtmFileName)
     dtm = fileIO.geoGrid(dtmFileName, objOnly = True)
@@ -671,10 +668,27 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
     if threads is None:
 
+        if clipRasterPolyName is not None:
+            if ':' in clipRasterPolyName:
+                fileName = clipRasterPolyName.split(':')[0]
+                lyrName = clipRasterPolyName.split(':')[1]
+                clipRasterPolyDataSource = ogr.Open(fileName)
+                clipRasterPolyLayer = clipRasterPolyDataSource.GetLayer(lyrName)
+            else:
+                clipRasterPolyDataSource = ogr.Open(clipRasterPolyName)
+                clipRasterPolyLayer = clipRasterPolyDataSource.GetLayerByIndex(0)
+
+            if clipRasterPolyDataSource is None:
+                raise ValueError("Can't open clip polygon")
+
+            clipRasterPolyLayer.ResetReading()
+        else:
+            clipRasterPolyLayer = None
+
         for i in range(xsz):
             for j in range(ysz):
 
-                if (ticker%tickerStep)==0 or True:
+                if (ticker%tickerStep)==0:
                     pc = int(100.*ticker/(xsz * ysz))
                     print(f"{pc}%% {i}/{xsz},{j}/{ysz} "%(), end='')
 
@@ -710,7 +724,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
         returnValues = []
         for i, j in product(range(xsz), range(ysz)):
             funcArgList.append((i, j, xll, yll, cellSize, dtmFileName, nFP, conveyanceFunc, storageFunc,
-                                         None, clipRasterPolyLayer, rvs, saveDtmTiles))
+                                         None, clipRasterPolyName, rvs, saveDtmTiles, maskGrid))
 
         counter = 0
 
