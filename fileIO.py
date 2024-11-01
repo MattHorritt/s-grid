@@ -3,6 +3,9 @@ from osgeo import ogr
 import numpy
 import csv
 import os
+import psycopg2
+import math
+import tempfile
 
 # Hack to avoid proj issue throwing exception
 gdal.DontUseExceptions()
@@ -88,6 +91,8 @@ class geoGrid:
         cp.grid=self.grid.copy()
 
         return cp
+
+
 
 
 def readPolylineShapefile(fileName,layerName=None):
@@ -429,6 +434,118 @@ def saveScalarGrid(s,xll,yll,dx,fileName):
     outputTIFF.FlushCache()
     geotiffDriver=None
 
+################################################################################
+def uploadGridToDb(gridFileName, outputTableName, depthThresholds = None):
+    pgStr='PG:"dbname=ltis2025 host=localhost password=''postgres'' port=5432 user=postgres ACTIVE_SCHEMA=slr"'
+
+    try:
+        conn = psycopg2.connect("dbname='ltis2025' port=5432 user='postgres' host='localhost' password='postgres'")
+    except:
+        print
+        "Unable to connect to the database"
+
+    conn.autocommit = True
+
+    cur = conn.cursor()
+
+    gGrid = geoGrid(gridFileName, objOnly = True)
+
+    tileSize = 100000
+    pondAreaThreshold = 1e4  # 10 ha
+    islandAreaThreshold = 5e4  # 50 ha
+
+    nTilesX=int(math.ceil(gGrid.xsz*gGrid.dx/tileSize))
+    nTilesY=int(math.ceil(gGrid.ysz*gGrid.dx/tileSize))
+
+    tableNameList=[]
+
+    if depthThresholds is None:
+        depthThresholds = [0]
+
+    for depthThreshold in depthThresholds:
+
+        # Run through tiles
+        for i in range(nTilesX):
+            for j in range(nTilesY):
+
+                print(f"Processing tile {i+1}/{nTilesX} {j+1}/{nTilesY} depth threshold {depthThreshold}")
+
+                tileXmin=gGrid.xll + i * tileSize
+                tileXmax=tileXmin + tileSize
+                tileYmin=gGrid.yll + j * tileSize
+                tileYmax=tileYmin + tileSize
+
+                # Generate depth map tile
+                gdalCmdStr = 'gdal_translate -ot Float32 -of GTiff '
+                gdalCmdStr += f'-projwin {tileXmin} {tileYmax} {tileXmax} {tileYmin} '
+                gdalCmdStr += gridFileName + ' '
+
+                tmpDepthFileName=next(tempfile._get_candidate_names())+'.tiff'
+
+                gdalCmdStr+=tmpDepthFileName
+                os.system(gdalCmdStr + ' > /dev/null 2>&1')
+
+                # Threshold into extent
+                tmpExtentFileName=next(tempfile._get_candidate_names())+'.tiff'
+
+                gdalCmdStr='gdal_calc.py -A %s --calc="A>%f" --outfile=%s --type=Byte'\
+                    %(tmpDepthFileName,depthThreshold,tmpExtentFileName)
+                os.system(gdalCmdStr + ' > /dev/null 2>&1')
+
+                # Convert to vector and load to PostGIS table - use temporary table for now
+                tableName='tmp_%02i%02i'%(i,j)
+                tableNameList.append(tableName)
+                cur.execute("drop table if exists slr.tmp")
+
+                gdalCmdStr='gdal_polygonize.py %s -f PostgreSQL  %s tmp'%(tmpExtentFileName,pgStr)
+                os.system(gdalCmdStr + ' > /dev/null 2>&1')
+
+                os.remove(tmpExtentFileName)
+                os.remove(tmpDepthFileName)
+
+                # Remove dn=0 polygons
+                cur.execute("delete from slr.tmp where dn=0 or dn is NULL")
+
+                # Remove ponds
+                cur.execute("delete from slr.tmp where st_area(wkb_geometry)<%s"%pondAreaThreshold)
+
+                # Remove islands by writing outer rings to new table
+                cur.execute('drop table if exists slr.%s'%tableName)
+
+                sqlStr='create table slr.%s as '%tableName
+                sqlStr+='WITH rings AS ( '
+                sqlStr+='SELECT ogc_fid, (ST_DumpRings((st_dump(st_makevalid(wkb_geometry))).geom)).geom '
+                sqlStr+='FROM slr.tmp) '
+                sqlStr+='SELECT -ogc_fid as ogc_fid, ST_BuildArea(ST_Collect(geom)) as geom '
+                sqlStr+='from rings WHERE ST_Area(geom) > %f GROUP BY ogc_fid'%islandAreaThreshold
+                cur.execute(sqlStr)
+
+                # Add depth values
+                sqlStr = 'alter table slr.%s add column depth real'%tableName
+                cur.execute(sqlStr)
+
+                sqlStr = 'update slr.%s set depth = %s'%(tableName, depthThreshold)
+                cur.execute(sqlStr)
+
+                # burn into binary extent raster
+                # gdalCmdStr='gdal_rasterize -burn 1 -l %s %s %s'%(tableName,pgStr,outputExtentFileName)
+                # os.system(gdalCmdStr+' > /dev/null 2>&1')
+
+    # Merge outputs to single table
+    sqlStr='drop table if exists slr.%s;'%outputTableName
+    sqlStr+='create table slr.%s as '%outputTableName
+    sqlStr+='select * from slr.%s '%tableNameList[0]
+    for tableName in tableNameList[1:]:
+        sqlStr+='union select * from slr.%s '%tableName
+    cur.execute(sqlStr)
+
+    # And delete tmp files
+    for tableName in tableNameList:
+        sqlStr='drop table if exists slr.%s '%tableName
+        cur.execute(sqlStr)
+
+    return
+
 def saveScalarGridByte(s,xll,yll,dx,fileName):
     xsz=s.shape[0]
     ysz=s.shape[1]
@@ -442,3 +559,9 @@ def saveScalarGridByte(s,xll,yll,dx,fileName):
     outputTIFF.GetRasterBand(1).WriteArray(s.transpose()[::-1,:])
     outputTIFF.FlushCache()
     geotiffDriver=None
+
+if __name__ == "__main__":
+
+    # Test upload to DB
+    gridFileName = r"50m_results/output_slr1p0_rp200_max_depth.vrt"
+    uploadGridToDb(gridFileName, "slr1p0_rp200", depthThresholds=[0, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0])

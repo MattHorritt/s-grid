@@ -14,10 +14,10 @@ noDataReplacement=None
 
 # Folder and first part of filename where CSV outputs from buildModel are stored
 resultsDirectory="50m_results"
-resultsPrefix="output_slr1.0_rp200"
+resultsPrefix="output_slr1p0_rp200"
 
 processMax=True # Set to true to save max water levels, flows etc
-processEnd=True # Set to true to save final water levels, flows etc
+processEnd=False # Set to true to save final water levels, flows etc
 
 defaultDepth=1.0    # Depth burnt into flow paths
 flowThreshold=10.   # Use this to switch off interpolation between cells with
@@ -78,6 +78,7 @@ if processEnd:
                        extendWlGrid,cppBurnFlowPaths,cppMakeWlGrid,cppWlFill,cppClipZero,
                        saveCsv=False)
 
+
 if processMax:
     wlFileName=os.path.join(resultsDirectory,resultsPrefix+'_max_wl.csv')
     flowFileName=os.path.join(resultsDirectory,resultsPrefix+'_max_flow.csv')
@@ -96,6 +97,8 @@ if processMax:
                        resultsDirectory,resultsPrefix+'_max',cppResample3,cppLazyFlowPaths,
                        extendWlGrid,cppBurnFlowPaths,cppMakeWlGrid,cppWlFill,cppClipZero,
                        saveCsv=False)
+
+
 
 if useTempTopoFile:
     os.remove(tmpDtmFileName)
