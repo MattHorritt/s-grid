@@ -525,9 +525,10 @@ def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, 
         # Decide whether to include this cell - if all NaNs, or all replacement values, skip
         if numpy.all(dtmWindow == -9999):
             return conveyanceValuesX, conveyanceValuesY, storageValues
-        for v1 in rvs.keys():
-            if numpy.all(dtmWindow == v1):
-                return conveyanceValuesX, conveyanceValuesY, storageValues
+        if rvs is not None:
+            for v1 in rvs.keys():
+                if numpy.all(dtmWindow == v1):
+                    return conveyanceValuesX, conveyanceValuesY, storageValues
 
         # Check if this square intersect clip polygon if given - this test is potentially slow - so do last
         if clipLyr is not None:
@@ -645,24 +646,30 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     if threads is None:
 
         for i in range(xsz):
-
-            if (ticker%tickerStep)==0:
-                print("%i%% "%(100.*ticker/xsz), end='')
-
-                if ticker > 0:
-                    pcComplete = float(ticker) / xsz
-                    pcToGo = 1. - pcComplete
-                    t2 = time.time() - t1
-                    projectedFinish = time.time() + pcToGo * (t2 / pcComplete)
-                    projectedFinishString = time.strftime("%H:%M:%S", time.localtime(projectedFinish))
-                    print(projectedFinishString, end='')
-
-                print("...", end='')
-                sys.stdout.flush()
-
-            ticker += 1
-
             for j in range(ysz):
+
+                if (ticker%tickerStep)==0 or True:
+                    print("%0.0f%% "%(100.*ticker/(xsz * ysz)), end='')
+
+                    if ticker > 0:
+                        pcComplete = float(ticker) / (xsz * ysz)
+                        pcToGo = 1. - pcComplete
+                        t2 = time.time() - t1
+                        projectedFinish = time.time() + pcToGo * (t2 / pcComplete)
+
+                        if pcToGo * (t2 / pcComplete) < 86400: # <1 day, report time only
+                            projectedFinishString = time.strftime("%H:%M:%S", time.localtime(projectedFinish))
+                        else: # Report date too
+                            projectedFinishString = time.strftime("%d/%m/%y %H:%M:%S", time.localtime(projectedFinish))
+
+                        print(projectedFinishString, end='')
+
+                    print("...", end='')
+                    sys.stdout.flush()
+
+                ticker += 1
+
+
                 cX, cY, st = processCell(i, j, xll, yll, cellSize, dtm, nFP, conveyanceFunc, storageFunc,
                                          clipLyr = clipRasterPolyLayer, rvs = rvs, saveDtmTiles = saveDtmTiles)
 

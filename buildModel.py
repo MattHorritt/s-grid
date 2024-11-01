@@ -4,12 +4,12 @@
 # CONTROL PANEL
 
 # Topography
-dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/OS Panorama 50m clip range.tif"
+dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range.tif"
 clipPolyName="/merlin1/Projects/LTIS SLR/GIS/England_buffer.gpkg:1km" # Provide polygon to clip catchment etc
 useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access for large grids
 
 # These values can be used to replace NULLs (e.g. at sea) with sensible values
-replacement_values = {-10:20, 20:20}
+replacement_values = None # {-10:20, 20:20}
 
 # Use this to add NULL cells around edge - allows water to fall out of model
 addNullEdges=False
@@ -28,7 +28,7 @@ nFloodplain=0.06    # Can omit this if grid data supplied
 nFloodplainFile=None # Raster file of roughness, with same size/res as DTM
 
 # Output options
-outputPrefix = '50m_'
+outputPrefix = '2m_'
 outputFile= outputPrefix+"params.pck"
 gridFileName=outputPrefix+"grid.csv"
 saveDtmTiles = True
