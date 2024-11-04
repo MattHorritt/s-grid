@@ -72,11 +72,10 @@ if processEnd:
     wlGrid[maskList]=storagePar[:,:,0][maskList]
 
     sgrid.saveResults(wlGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
-                       defaultDepth,flowThreshold,channel,flowPathOutput,
-                       tmpDtmFileName,noDataValue,noDataReplacement,
-                       resultsDirectory,resultsPrefix+'_final',cppResample3,cppLazyFlowPaths,
-                       extendWlGrid,cppBurnFlowPaths,cppMakeWlGrid,cppWlFill,cppClipZero,
-                       saveCsv=False)
+                       flowThreshold,
+                       noDataValue,noDataReplacement,
+                       resultsDirectory,resultsPrefix+'_final',cppResample3,
+                       saveCsv=True)
 
 
 if processMax:
@@ -92,12 +91,10 @@ if processMax:
     wlGrid[maskList]=storagePar[:,:,0][maskList]
 
     sgrid.saveResults(wlGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
-                       defaultDepth,flowThreshold,channel,flowPathOutput,
-                       tmpDtmFileName,noDataValue,noDataReplacement,
-                       resultsDirectory,resultsPrefix+'_max',cppResample3,cppLazyFlowPaths,
-                       extendWlGrid,cppBurnFlowPaths,cppMakeWlGrid,cppWlFill,cppClipZero,
-                       saveCsv=False)
-
+                       flowThreshold,
+                       noDataValue,noDataReplacement,
+                       resultsDirectory,resultsPrefix+'_max',cppResample3,
+                       saveCsv=True)
 
 
 if useTempTopoFile:

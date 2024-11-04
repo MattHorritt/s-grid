@@ -1524,78 +1524,26 @@ def __lowerChannelCells(topoProfile,dxt,width,depth,nChan,nFP):
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
-                       defaultDepth,flowThreshold,channel,flowPathOutput,
-                       dtmFileName,noDataValue,noDataReplacement,
+                       flowThreshold,
+                       noDataValue,noDataReplacement,
                        outputDirectory,outputPrefix,
-                       resampleFunction,lfpFunction,
-                       extendWlGrid,cppBurnFlowPaths,cppMakeWlGrid,cppWlFill,cppClipZero,
-                       saveCsv=True,zeroPolyList=None):
-
-    if flowPathOutput is not None:
-        defaultDepth=arrayType(defaultDepth)
-        flowThreshold=arrayType(flowThreshold)
-        dWeight=arrayType(0.25)
-
-    # Save zeroPolyList as csv file, and get poly mask extents - don't
-    # need to process these for all tiles
-    if zeroPolyList is not None:
-        polyXmin=1e20
-        polyXmax=-1e20
-        polyYmin=1e20
-        polyYmax=-1e20
-
-        for poly in zeroPolyList:
-            b=poly.bounds
-            polyXmin=min(b[0],polyXmin)
-            polyYmin=min(b[1],polyYmin)
-
-            polyXmax=max(b[2],polyXmax)
-            polyYmax=max(b[3],polyYmax)
-
-            tmpWktFileName=tempfile._get_candidate_names().next()+'.csv'
-
-            wktFile=open(tmpWktFileName,"w")
-            wktFile.write("id;wkt\n")
-            count=0
-
-            for poly in zeroPolyList:
-                wktFile.write("%i;%s\n"%(count,poly.wkt))
-                count+=1
-
-            wktFile.close()
+                       resampleFunction,saveCsv=True):
 
     outputFilePathRoot=os.path.join(outputDirectory,outputPrefix)
-
-#    nExpansionIts=None;
-#    nSmoothingIts=None;
-#    expansionSlope=None;
-
-    nExpansionIts=5;
-    nSmoothingIts=5;
-    expansionSlope=0.01;
 
     zMin=numpy.zeros((xsz,ysz),dtype=numpy.float32,order='C') # Should use array type
     zMax=numpy.zeros((xsz,ysz),dtype=numpy.float32,order='C')
 
-    if channel:
-        zMin[:,:]=storagePar[:,:,1]
-        zMax[:,:]=storagePar[:,:,2]
-    else:
-        zMin[:,:]=storagePar[:,:,0]
-        zMax[:,:]=storagePar[:,:,1]
+    zMin[:,:]=storagePar[:,:,0]
+    zMax[:,:]=storagePar[:,:,1]
 
-    dtmObj,ddx,dtmXsz,dtmYsz,dxll,dyll=fileIO.readScalarGridObj(dtmFileName)
-
-    tileSize=1000 # Tile to maximum of this size square
-    numTilesX=xsz # int(dtmXsz/tileSize)+1
-    numTilesY=ysz # int(dtmYsz/tileSize)+1
 
     tileList = []
 
     for iTile in range(557, 568): # range(xsz):
         for jTile in range(322, 332): # ysz):
 
-            print("Processing tile %i/%i,%i/%i"%(iTile+1,numTilesX,jTile+1,numTilesY))
+            print("Processing tile %i/%i,%i/%i"%(iTile+1,xsz,jTile+1,ysz))
 
             x0=xll+iTile*cellSize
             x1=x0+cellSize
@@ -1627,46 +1575,18 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
                 xll,yll,cellSize,xsz,ysz,dtmTile,dtmTileGeoGrid.dx,dtmTileGeoGrid.xsz,dtmTileGeoGrid.ysz,\
                 x0,y0,wlGrid2,depthGrid)
 
-            print(depthGrid.min(), depthGrid.max())
-
             tileString=f"{iTile:03d}_{jTile:03d}"
 
             try:
-                fileIO.saveScalarGrid(depthGrid,x0,y0,ddx,\
+                fileIO.saveScalarGrid(depthGrid,x0,y0,dtmTileGeoGrid.dx,\
                     outputFilePathRoot+"_depth_"+tileString+".tif")
 
                 tileList.append((iTile, jTile))
             except:
                 pass
 
-            ###################################################################
-            if zeroPolyList is not None and \
-                polyXmin<x1 and polyXmax>x0 and polyYmin<y1 and polyYmax>y0:
-                print("Zeroing polys...")
-                reservoirs.maskZeroPoly(tmpWktFileName,\
-                    os.path.join(outputDirectory,\
-                    outputPrefix+"_depth_"+tileString+".tif"))
-            ###################################################################
-            fileIO.saveScalarGrid(wlGrid2,x0,y0,ddx,\
+            fileIO.saveScalarGrid(wlGrid2,x0,y0,dtmTileGeoGrid.dx,\
                 outputFilePathRoot+"_wl_"+tileString+".tif")
-
-            lfpGrid=numpy.zeros((dtmTileGeoGrid.xsz,dtmTileGeoGrid.ysz),dtype=arrayType)
-
-            lfpFunction(xll,yll,cellSize,xsz,ysz,dtmTile,ddx,dtmTileGeoGrid.xsz,dtmTileGeoGrid.ysz,x0,y0,\
-                lfpGrid,flowX,flowY,flowThreshold,defaultDepth,dWeight)
-
-            fileIO.saveScalarGrid(lfpGrid,x0,y0,ddx,\
-                outputFilePathRoot+"_lfp_"+tileString+".tif")
-
-            # Merge depth and flowpath grids
-            repList=numpy.where((depthGrid<defaultDepth) & (lfpGrid>0))
-            depthGrid[repList]=defaultDepth
-
-            fileIO.saveScalarGrid(depthGrid,x0,y0,ddx,\
-                outputFilePathRoot+"_merge_"+tileString+".tif")
-
-
-
 
     # Build VRTs for grid outputs
     print("Generating VRTs...",)
@@ -1691,49 +1611,6 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
 
     call(vrtCommand)
 
-    # Flow paths
-    vrtCommand=['gdalbuildvrt']
-    vrtCommand.append(outputFilePathRoot+'_lfp.vrt')
-
-    for iTile, jTile in tileList:
-            tileString=f"{iTile:03d}_{jTile:03d}"
-            vrtCommand.append(outputFilePathRoot+"_lfp_"+tileString+".tif")
-
-    call(vrtCommand)
-
-    # Merged depth/flow paths
-    vrtCommand=['gdalbuildvrt']
-    vrtCommand.append(outputFilePathRoot+'_merge.vrt')
-
-    for iTile, jTile in tileList:
-        tileString=f"{iTile:03d}_{jTile:03d}"
-        vrtCommand.append(outputFilePathRoot+"_merge_"+tileString+".tif")
-
-    call(vrtCommand)
-
-    # Filled depth/wl
-    if extendWlGrid:
-        vrtCommand=['gdalbuildvrt']
-        vrtCommand.append(outputFilePathRoot+'_depth_fill.vrt')
-
-        for iTile, jTile in tileList:
-            tileString=f"{iTile:03d}_{jTile:03d}"
-            vrtCommand.append(outputFilePathRoot+"_depth_fill_"+tileString+".tif")
-
-        call(vrtCommand)
-
-        vrtCommand=['gdalbuildvrt']
-        vrtCommand.append(outputFilePathRoot+'_wl_fill.vrt')
-
-        for iTile in range(numTilesX):
-            for jTile in range(numTilesY):
-                tileString=f"{iTile:03d}_{jTile:03d}"
-                vrtCommand.append(outputFilePathRoot+"_wl_fill_"+tileString+".tif")
-
-        call(vrtCommand)
-
-    print("done.")
-
     if saveCsv:
         fileIO.saveVectorCSV(flowX,flowY,xll,yll,cellSize,\
             outputFilePathRoot+"_flow.csv",thresholdVal=flowThreshold)
@@ -1741,10 +1618,7 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
         fileIO.saveScalarCSV(wlGrid,xll,yll,cellSize,\
             outputFilePathRoot+"_wl.csv", headerList=['WL'])
 
-    # Delete temporary CSV/WKT file for reservoirs
-    if zeroPolyList is not None:
-        os.remove(tmpWktFileName)
-
+    return
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 def deleteFileComplete(progName,str):
