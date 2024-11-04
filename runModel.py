@@ -9,9 +9,9 @@ import sys
 seaLevelRise = float(sys.argv[1])
 returnPeriod = float(sys.argv[2])
 
-parametersFile="50m_params.pck" # Output from buildModel.py
+parametersFile="2m_params.pck" # Output from buildModel.py
 
-outputDirectory="50m_results" # Folder for results
+outputDirectory="2m_results" # Folder for results
 
 slrStr = f"{seaLevelRise:.1f}"
 slrStr = slrStr.replace('.', 'p')

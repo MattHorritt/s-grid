@@ -17,6 +17,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 from itertools import product
 import time
 from pathlib import Path
+import time
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 arrayType=numpy.float64
@@ -1585,45 +1586,59 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
 
     dtmObj,ddx,dtmXsz,dtmYsz,dxll,dyll=fileIO.readScalarGridObj(dtmFileName)
 
-    tileSize=10000 # Tile to maximum of this size square
-    numTilesX=int(dtmXsz/tileSize)+1
-    numTilesY=int(dtmYsz/tileSize)+1
+    tileSize=1000 # Tile to maximum of this size square
+    numTilesX=xsz # int(dtmXsz/tileSize)+1
+    numTilesY=ysz # int(dtmYsz/tileSize)+1
 
-    for iTile in range(numTilesX):
-        for jTile in range(numTilesY):
+    tileList = []
+
+    for iTile in range(557, 568): # range(xsz):
+        for jTile in range(322, 332): # ysz):
 
             print("Processing tile %i/%i,%i/%i"%(iTile+1,numTilesX,jTile+1,numTilesY))
 
-            x0=dxll+iTile*tileSize*ddx
-            x1=min(x0+tileSize*ddx,x0+ddx*dtmXsz)
+            x0=xll+iTile*cellSize
+            x1=x0+cellSize
 
-            y1=dyll+dtmYsz*ddx-jTile*tileSize*ddx
-            y0=max(y1-tileSize*ddx,dyll)
+            y0=yll+jTile*cellSize
+            y1=y0+cellSize
 
-            xoff=iTile*tileSize
-            yoff=jTile*tileSize
 
-            tileXsize=min(tileSize,dtmXsz-iTile*tileSize)
-            tileYsize=min(tileSize,dtmYsz-jTile*tileSize)
+            dtmTileName = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles")/f"{iTile:03}_{jTile:03}.tif"
 
-            dtmTile=dtmObj.ReadAsArray(xoff=xoff,yoff=yoff,xsize=tileXsize,ysize=tileYsize).transpose().copy()
-            dtmTile=numpy.array(dtmTile[:,::-1],arrayType)
+            if not os.path.isfile(dtmTileName):
+                continue
+
+            try:
+                dtmTileGeoGrid = fileIO.geoGrid(str(dtmTileName))
+                dtmTile = dtmTileGeoGrid.grid
+            except:
+                pass
 
             if noDataValue is not None and noDataReplacement is not None:
                 replaceArrayVals(dtmTile,arrayType(noDataValue),noDataReplacement)
 
-            wlGrid2=numpy.zeros((tileXsize,tileYsize),dtype=arrayType)-9999.
-            depthGrid=numpy.zeros((tileXsize,tileYsize),dtype=arrayType)-9999.
+            wlGrid2=numpy.zeros((dtmTileGeoGrid.xsz,dtmTileGeoGrid.ysz),dtype=arrayType)-9999.
+            depthGrid=numpy.zeros((dtmTileGeoGrid.xsz,dtmTileGeoGrid.ysz),dtype=arrayType)-9999.
+
 
             resampleFunction(wlGrid,volGrid,flowX,flowY,zMin,zMax, \
                 flowThreshold,\
-                xll,yll,cellSize,xsz,ysz,dtmTile,ddx,tileXsize,tileYsize,\
+                xll,yll,cellSize,xsz,ysz,dtmTile,dtmTileGeoGrid.dx,dtmTileGeoGrid.xsz,dtmTileGeoGrid.ysz,\
                 x0,y0,wlGrid2,depthGrid)
 
-            tileString="tile%02i%02i"%(iTile,jTile)
+            print(depthGrid.min(), depthGrid.max())
 
-            fileIO.saveScalarGrid(depthGrid,x0,y0,ddx,\
-                outputFilePathRoot+"_depth_"+tileString+".tif")
+            tileString=f"{iTile:03d}_{jTile:03d}"
+
+            try:
+                fileIO.saveScalarGrid(depthGrid,x0,y0,ddx,\
+                    outputFilePathRoot+"_depth_"+tileString+".tif")
+
+                tileList.append((iTile, jTile))
+            except:
+                pass
+
             ###################################################################
             if zeroPolyList is not None and \
                 polyXmin<x1 and polyXmax>x0 and polyYmin<y1 and polyYmax>y0:
@@ -1635,9 +1650,9 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
             fileIO.saveScalarGrid(wlGrid2,x0,y0,ddx,\
                 outputFilePathRoot+"_wl_"+tileString+".tif")
 
-            lfpGrid=numpy.zeros((tileXsize,tileYsize),dtype=arrayType)
+            lfpGrid=numpy.zeros((dtmTileGeoGrid.xsz,dtmTileGeoGrid.ysz),dtype=arrayType)
 
-            lfpFunction(xll,yll,cellSize,xsz,ysz,dtmTile,ddx,tileXsize,tileYsize,x0,y0,\
+            lfpFunction(xll,yll,cellSize,xsz,ysz,dtmTile,ddx,dtmTileGeoGrid.xsz,dtmTileGeoGrid.ysz,x0,y0,\
                 lfpGrid,flowX,flowY,flowThreshold,defaultDepth,dWeight)
 
             fileIO.saveScalarGrid(lfpGrid,x0,y0,ddx,\
@@ -1650,48 +1665,7 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
             fileIO.saveScalarGrid(depthGrid,x0,y0,ddx,\
                 outputFilePathRoot+"_merge_"+tileString+".tif")
 
-           # Extend WL grid
-            if extendWlGrid:
-                # This is memory critical - use 3 arrays only
-#                arr1=dtm
-#                arr2=depthGrid
-#                arr3=lfpGrid
 
-                # Insert flow paths, if present
-                if lfpGrid is not None:
-                    cppBurnFlowPaths(depthGrid,lfpGrid,tileXsize,tileYsize)
-
-                wlGrid2[:,:]=0
-
-                cppMakeWlGrid(dtmTile,depthGrid,wlGrid2,dtmXsz,dtmYsz,0.1)
-
-                depthGrid[:,:]=0
-
-                # Default parameters for expanding/filling water level
-                if nExpansionIts is None:
-                    nExpansionIts=int(0.5*cellSize/ddx)
-
-                if nSmoothingIts is None:
-                    nSmoothingIts=5
-
-                if expansionSlope is None:
-                    expansionSlope=2.*defaultDepth/cellSize
-
-                wlGrid3=numpy.zeros((tileXsize,tileYsize),dtype=arrayType)-9999.
-                depthGrid3=numpy.zeros((tileXsize,tileYsize),dtype=arrayType)-9999.
-
-                cppWlFill(wlGrid2,wlGrid3,dtmXsz,dtmYsz,ddx,nExpansionIts,nSmoothingIts,expansionSlope)
-
-                fileIO.saveScalarGrid(wlGrid3,dxll,dyll,ddx,\
-                    outputFilePathRoot+"_wl_fill_"+tileString+".tif")
-
-
-                depthGrid3[:,:]=wlGrid3-dtmTile
-
-                cppClipZero(depthGrid3,dtmXsz,dtmYsz)
-
-                fileIO.saveScalarGrid(depthGrid3,dxll,dyll,ddx,\
-                    outputFilePathRoot+"_depth_fill_"+tileString+".tif")
 
 
     # Build VRTs for grid outputs
@@ -1701,10 +1675,9 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
     vrtCommand=['gdalbuildvrt']
     vrtCommand.append(outputFilePathRoot+'_depth.vrt')
 
-    for iTile in range(numTilesX):
-        for jTile in range(numTilesY):
-            tileString="tile%02i%02i"%(iTile,jTile)
-            vrtCommand.append(outputFilePathRoot+"_depth_"+tileString+".tif")
+    for iTile, jTile in tileList:
+        tileString=f"{iTile:03d}_{jTile:03d}"
+        vrtCommand.append(outputFilePathRoot+"_depth_"+tileString+".tif")
 
     call(vrtCommand)
 
@@ -1712,10 +1685,9 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
     vrtCommand=['gdalbuildvrt']
     vrtCommand.append(outputFilePathRoot+'_wl.vrt')
 
-    for iTile in range(numTilesX):
-        for jTile in range(numTilesY):
-            tileString="tile%02i%02i"%(iTile,jTile)
-            vrtCommand.append(outputFilePathRoot+"_wl_"+tileString+".tif")
+    for iTile, jTile in tileList:
+        tileString=f"{iTile:03d}_{jTile:03d}"
+        vrtCommand.append(outputFilePathRoot+"_wl_"+tileString+".tif")
 
     call(vrtCommand)
 
@@ -1723,9 +1695,8 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
     vrtCommand=['gdalbuildvrt']
     vrtCommand.append(outputFilePathRoot+'_lfp.vrt')
 
-    for iTile in range(numTilesX):
-        for jTile in range(numTilesY):
-            tileString="tile%02i%02i"%(iTile,jTile)
+    for iTile, jTile in tileList:
+            tileString=f"{iTile:03d}_{jTile:03d}"
             vrtCommand.append(outputFilePathRoot+"_lfp_"+tileString+".tif")
 
     call(vrtCommand)
@@ -1734,10 +1705,9 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
     vrtCommand=['gdalbuildvrt']
     vrtCommand.append(outputFilePathRoot+'_merge.vrt')
 
-    for iTile in range(numTilesX):
-        for jTile in range(numTilesY):
-            tileString="tile%02i%02i"%(iTile,jTile)
-            vrtCommand.append(outputFilePathRoot+"_merge_"+tileString+".tif")
+    for iTile, jTile in tileList:
+        tileString=f"{iTile:03d}_{jTile:03d}"
+        vrtCommand.append(outputFilePathRoot+"_merge_"+tileString+".tif")
 
     call(vrtCommand)
 
@@ -1746,10 +1716,9 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
         vrtCommand=['gdalbuildvrt']
         vrtCommand.append(outputFilePathRoot+'_depth_fill.vrt')
 
-        for iTile in range(numTilesX):
-            for jTile in range(numTilesY):
-                tileString="tile%02i%02i"%(iTile,jTile)
-                vrtCommand.append(outputFilePathRoot+"_depth_fill_"+tileString+".tif")
+        for iTile, jTile in tileList:
+            tileString=f"{iTile:03d}_{jTile:03d}"
+            vrtCommand.append(outputFilePathRoot+"_depth_fill_"+tileString+".tif")
 
         call(vrtCommand)
 
@@ -1758,7 +1727,7 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
 
         for iTile in range(numTilesX):
             for jTile in range(numTilesY):
-                tileString="tile%02i%02i"%(iTile,jTile)
+                tileString=f"{iTile:03d}_{jTile:03d}"
                 vrtCommand.append(outputFilePathRoot+"_wl_fill_"+tileString+".tif")
 
         call(vrtCommand)

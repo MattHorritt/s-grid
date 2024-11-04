@@ -2,10 +2,10 @@
 
 #############################################################################
 # Control Panel
-parametersFile="50m_params.pck"
+parametersFile="2m_params.pck"
 
 # Topography
-dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/OS Panorama 50m clip range.tif"
+dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range.tif"
 useTempTopoFile=False # Use this to create uncompressed, tiled topo file to speed up access
 
 # These values can be used to replace NULLs (e.g. at sea) with sensible values
@@ -13,7 +13,7 @@ noDataValue=None
 noDataReplacement=None
 
 # Folder and first part of filename where CSV outputs from buildModel are stored
-resultsDirectory="50m_results"
+resultsDirectory="2m_results"
 resultsPrefix="output_slr1p0_rp200"
 
 processMax=True # Set to true to save max water levels, flows etc
@@ -56,7 +56,7 @@ else:
 dryThresh=0.1
 channel=False
 
-flowPathOutput="new"
+flowPathOutput=None
 extendWlGrid=False
 
 if processEnd:
