@@ -1592,8 +1592,10 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
     print("Generating VRTs...",)
 
     # Depths
-    vrtCommand=['gdalbuildvrt']
-    vrtCommand.append(outputFilePathRoot+'_depth.vrt')
+    vrtCommand=['gdal_merge.py']
+    vrtCommand += ['-o', outputFilePathRoot+'_depth.tif']
+    vrtCommand += ['-co', 'COMPRESS=LZW']
+    vrtCommand += ['-co', 'BIGTIFF=YES']
 
     for iTile, jTile in tileList:
         tileString=f"{iTile:03d}_{jTile:03d}"
@@ -1602,8 +1604,10 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
     call(vrtCommand)
 
     # Water levels
-    vrtCommand=['gdalbuildvrt']
-    vrtCommand.append(outputFilePathRoot+'_wl.vrt')
+    vrtCommand=['gdal_merge.py']
+    vrtCommand += ['-o', outputFilePathRoot+'_wl.tif']
+    vrtCommand += ['-co', 'COMPRESS=LZW']
+    vrtCommand += ['-co', 'BIGTIFF=YES']
 
     for iTile, jTile in tileList:
         tileString=f"{iTile:03d}_{jTile:03d}"
@@ -1617,6 +1621,8 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
 
         fileIO.saveScalarCSV(wlGrid,xll,yll,cellSize,\
             outputFilePathRoot+"_wl.csv", headerList=['WL'])
+
+    # Remove temporary geotiffs
 
     return
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
