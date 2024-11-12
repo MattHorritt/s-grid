@@ -16,11 +16,11 @@ replacement_values = {-10:-10, 20:20}
 addNullEdges=False
 
 # Extent and resolution of model
-xll=80000.    # Lower left corner
-yll=0.
+xll=600000.    # Lower left corner
+yll=300000.
 cellSize=1000.
-xsz=600
-ysz=700
+xsz=60
+ysz=60
 
 threads = 12
 
@@ -29,7 +29,7 @@ nFloodplain=0.06    # Can omit this if grid data supplied
 nFloodplainFile=None # Raster file of roughness, with same size/res as DTM
 
 # Output options
-outputPrefix = '2m_'
+outputPrefix = '2m_Norfolk_'
 outputFile= outputPrefix+"params.pck"
 gridFileName=outputPrefix+"grid.csv"
 saveDtmTiles = True

@@ -2,7 +2,7 @@
 
 #############################################################################
 # Control Panel
-parametersFile="2m_params.pck"
+parametersFile="2m_EA_params.pck"
 
 # Topography
 dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range.tif"
@@ -13,14 +13,14 @@ noDataValue=None
 noDataReplacement=None
 
 # Folder and first part of filename where CSV outputs from buildModel are stored
-resultsDirectory="2m_results"
+resultsDirectory="2m_EA_results"
 resultsPrefix="output_slr1p0_rp200"
 
 processMax=True # Set to true to save max water levels, flows etc
 processEnd=False # Set to true to save final water levels, flows etc
 
 defaultDepth=1.0    # Depth burnt into flow paths
-flowThreshold=10.   # Use this to switch off interpolation between cells with
+flowThreshold=1.0   # Use this to switch off interpolation between cells with
                     # flows below this value
 
 ###########################################################################
@@ -94,7 +94,7 @@ if processMax:
                        flowThreshold,
                        noDataValue,noDataReplacement,
                        resultsDirectory,resultsPrefix+'_max',cppResample3,
-                       saveCsv=True)
+                       saveCsv=True, threads=None)
 
 
 if useTempTopoFile:

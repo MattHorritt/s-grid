@@ -1707,6 +1707,8 @@ extern "C" void resample3(float *wlArg, float *volGridArg,
      zMin.assign(xsz,ysz,zMinArg);
      zMax.assign(xsz,ysz,zMaxArg);
 
+    printf("Tick 1...");
+
 //    printf("zMin:\n");
 //    for(i=0;i<xsz;i++) for(j=0;j<ysz;j++) printf(" %0.3f",zMin(i,j));
 
@@ -1737,12 +1739,19 @@ extern "C" void resample3(float *wlArg, float *volGridArg,
 //      Or ... Depth is above a threshold
 
 //            printf("zMin=%f wl=%f \n",zMin(i,j),wl(i,j));
+
+        print(i, j);
+        print(q1, q2, q3, q4);
+        print(wl(i,j), zMin(i,j), zMax(i,j));
+
             if( //(wl(i,j)-zMin(i,j))<0.5) continue;
 
                 !((fabs(q1)>=flowThresh || fabs(q2)>=flowThresh || fabs(q3)>=flowThresh || fabs(q4)>=flowThresh)||
                 ((wl(i,j)-zMin(i,j))>0.5)||
                 (wl(i,j)>zMax(i,j))))
                 continue;
+
+        printf("Tick 2 %i %i"%(i,j));
 
 		xCell1=xll+i*dx;
 		yCell1=yll+j*dx;
@@ -1773,6 +1782,9 @@ extern "C" void resample3(float *wlArg, float *volGridArg,
         yi1=nint((yCell2-dtmYll)/dtmCellSize);
 
 //        if(xi0<0 || xi1>=dtmXsz || yi0<0 || yi1>=dtmYsz) continue; // Some of cell outside DTM
+
+        printf("Tick 3...")
+
 
 		for(ii=xi0;ii<xi1;ii++) for(jj=yi0;jj<yi1;jj++)
 		{

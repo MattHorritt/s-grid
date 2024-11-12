@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import sys
 
@@ -9,9 +9,11 @@ import sys
 seaLevelRise = float(sys.argv[1])
 returnPeriod = float(sys.argv[2])
 
-parametersFile="2m_params.pck" # Output from buildModel.py
+print(f"Processing SLR={seaLevelRise} Rp={returnPeriod}")
 
-outputDirectory="2m_results" # Folder for results
+parametersFile="2m_EA_params.pck" # Output from buildModel.py
+
+outputDirectory="2m_EA_results" # Folder for results
 
 slrStr = f"{seaLevelRise:.1f}"
 slrStr = slrStr.replace('.', 'p')
@@ -40,7 +42,6 @@ initialTimeStep=30.  # Time step at start of run
 minTimeStep=30.
 maxTimeStep=3600.
 
-seaLevelRise = 0.0
 defenceLineStr = r"PG: host=localhost dbname=ltis2025 active_schema=slr user=postgres password=postgres"
 layerName = "defence_toe_levels"
 # See comment "Add rainfall" for where to edit rainfall/runoff code

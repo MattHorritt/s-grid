@@ -435,7 +435,7 @@ def saveScalarGrid(s,xll,yll,dx,fileName):
     geotiffDriver=None
 
 ################################################################################
-def uploadGridToDb(gridFileName, outputTableName, depthThreshold = None):
+def uploadGridToDb(gridFileName, outputTableName, depthThreshold = None, dropTable = False):
     pgStr='PG:"dbname=ltis2025 host=localhost password=''postgres'' port=5432 user=postgres ACTIVE_SCHEMA=slr"'
 
     try:
@@ -461,7 +461,6 @@ def uploadGridToDb(gridFileName, outputTableName, depthThreshold = None):
 
     if depthThreshold is None:
         depthThreshold = 0
-
 
     # Run through tiles
     for i in range(nTilesX):
@@ -519,12 +518,11 @@ def uploadGridToDb(gridFileName, outputTableName, depthThreshold = None):
             sqlStr+='from rings WHERE ST_Area(geom) > %f GROUP BY ogc_fid'%islandAreaThreshold
             cur.execute(sqlStr)
 
-
-
-
     # Merge outputs to single table
-    sqlStr='drop table if exists slr.%s;'%outputTableName
-    sqlStr+='create table slr.%s as '%outputTableName
+    if dropTable:
+        sqlStr='drop table if exists slr.%s;'%outputTableName
+        sqlStr+='create table slr.%s as '%outputTableName
+
     sqlStr+='select * from slr.%s '%tableNameList[0]
     for tableName in tableNameList[1:]:
         sqlStr+='union select * from slr.%s '%tableName
@@ -541,6 +539,63 @@ def uploadGridToDb(gridFileName, outputTableName, depthThreshold = None):
     for tableName in tableNameList:
         sqlStr='drop table if exists slr.%s '%tableName
         cur.execute(sqlStr)
+
+    return
+
+################################################################################
+def uploadGridToDb2(depthGridFileName, outputTableName, depthThreshold = None, dropTable = False):
+    pgStr='PG:"dbname=ltis2025 host=localhost password=''postgres'' port=5432 user=postgres ACTIVE_SCHEMA=slr"'
+
+    try:
+        conn = psycopg2.connect("dbname='ltis2025' port=5432 user='postgres' host='localhost' password='postgres'")
+    except:
+        print
+        "Unable to connect to the database"
+
+    conn.autocommit = True
+
+    cur = conn.cursor()
+
+    # gGrid = geoGrid(gridFileName, objOnly = True)
+
+    if depthThreshold is None:
+        depthThreshold = 0
+
+
+    print(f"Processing depth grid {depthGridFileName}... ", end='')
+
+    # Threshold into extent
+    tmpExtentFileName=next(tempfile._get_candidate_names())+'.tiff'
+
+    gdalCmdStr='gdal_calc.py -A %s --calc="A>%f" --outfile=%s --type=Byte'\
+        %(depthGridFileName,depthThreshold,tmpExtentFileName)
+    os.system(gdalCmdStr) # + ' > /dev/null 2>&1')
+
+    # Convert to vector and load to PostGIS table - use temporary table for now
+    cur.execute("drop table if exists slr.tmp")
+
+    gdalCmdStr='gdal_polygonize.py %s -f PostgreSQL  %s tmp'%(tmpExtentFileName,pgStr)
+    os.system(gdalCmdStr) # + ' > /dev/null 2>&1')
+
+    os.remove(tmpExtentFileName)
+
+    # Remove dn=0 polygons
+    cur.execute("delete from slr.tmp where dn=0 or dn is NULL")
+
+    # Merge outputs to output table
+    if dropTable:
+        sqlStr='drop table if exists slr.%s;'%outputTableName
+        sqlStr+='create table slr.%s (depth real, geom geometry) '%outputTableName
+
+        cur.execute(sqlStr)
+
+    # Copy rows from slr.tmp into output table
+    sqlStr = 'insert into slr.%s select %s, wkb_geometry from slr.tmp' % (outputTableName, depthThreshold)
+    cur.execute(sqlStr)
+
+    # And delete tmp files
+    sqlStr='drop table if exists slr.tmp '
+    cur.execute(sqlStr)
 
     return
 
@@ -561,7 +616,7 @@ def saveScalarGridByte(s,xll,yll,dx,fileName):
 if __name__ == "__main__":
 
     # Test upload to DB
-    gridFileName = r"50m_results/output_slr1p0_rp200_max_depth.vrt"
+    gridFileName = r"2m_EA_results/output_slr1p0_rp200_max_depth.vrt"
 
     for d in [0, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0]:
         print("Processing threshold ", d)

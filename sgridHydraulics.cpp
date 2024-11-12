@@ -395,7 +395,7 @@ extern "C" void conveyanceParameters(int xi0, int yi0, int xi1, int yi1,
     profileLength = 0;
 	for(;;)
 	{
-	    if(dtm(xi0,yi0) != noDataValue)
+	    if(dtm(xi0,yi0) != -9999)
 	    {
 
             profile[pptr]=dtm(xi0,yi0);
@@ -1256,6 +1256,7 @@ extern "C" void resample3(float *wlArg, float *volGridArg,
 //    printf("zMin:\n");
 //    for(i=0;i<xsz;i++) for(j=0;j<ysz;j++) printf(" %0.3f",zMin(i,j));
 
+    printf("Tick...\n");
 
 	for(i=0;i<dtmXsz;i++) for(j=0;j<dtmYsz;j++)
 	{
@@ -1283,12 +1284,23 @@ extern "C" void resample3(float *wlArg, float *volGridArg,
 //      Or ... Depth is above a threshold
 
 //            printf("zMin=%f wl=%f \n",zMin(i,j),wl(i,j));
+
+            if(i==148 && j==72)
+            {
+                printf("%i,%i\n", i, j);
+                printf("%f %f %f %f\n", q1, q2, q3, q4);
+                printf("%f %f %f\n", wl(i,j), zMin(i,j), zMax(i,j));
+            }
+
             if( //(wl(i,j)-zMin(i,j))<0.5) continue;
 
                 !((fabs(q1)>=flowThresh || fabs(q2)>=flowThresh || fabs(q3)>=flowThresh || fabs(q4)>=flowThresh)||
                 ((wl(i,j)-zMin(i,j))>0.5)||
                 (wl(i,j)>zMax(i,j))))
                 continue;
+
+            if(i==148 && j==72) printf("Tock...\n");
+
 
 		xCell1=xll+i*dx;
 		yCell1=yll+j*dx;

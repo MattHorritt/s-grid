@@ -540,6 +540,19 @@ def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, 
                 if v1 != v2:
                     dtmWindow[numpy.where(dtmWindow == v1)] = v2
 
+        # TODO Might need to remove this
+        if dtmWindow.max() < 1.0:
+            return conveyanceValuesX, conveyanceValuesY, storageValues
+
+        # Set values below high water to -10
+        lowWaterMask = fileIO.geoGrid("/merlin1/Projects/LTIS SLR/GIS/DTM/low_water_grid_2m.tif", objOnly=True)
+        lowWaterMaskWindow = lowWaterMask.obj.ReadAsArray(xoff=xi0, yoff=dtm.ysz - 1 - yi1, xsize=windowXsz,
+                                           ysize=windowYsz).transpose().copy()
+        lowWaterMaskWindow = lowWaterMaskWindow[:, ::-1]
+        dtmWindow[numpy.where(lowWaterMaskWindow == 1)] = 20
+
+
+
         # Decide whether to include this cell - if all NaNs, or all replacement values, skip
         if numpy.all(dtmWindow == -9999):
             return conveyanceValuesX, conveyanceValuesY, storageValues
@@ -1520,6 +1533,60 @@ def __lowerChannelCells(topoProfile,dxt,width,depth,nChan,nFP):
 
     return nList
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Post processing tile for threading
+def postProcessTile(argTuple):
+    return argTuple, postProcessSingleCellTile(argTuple[0], argTuple[1], argTuple[2], argTuple[3], argTuple[4],
+                              argTuple[5], argTuple[6], argTuple[7], argTuple[8], argTuple[9],
+                              argTuple[10], argTuple[11], argTuple[12], argTuple[13], argTuple[14])
+
+
+
+
+def postProcessSingleCellTile(i, j, xll, yll, cellSize, tilePath, outputFilePathRoot,
+                              resampleFunction,
+                              volGrid, wlGrid, flowX, flowY, zMin, zMax, flowThreshold):
+
+    xsz, ysz = volGrid.shape
+
+    x0 = xll + i * cellSize
+    x1 = x0 + cellSize
+
+    y0 = yll + j * cellSize
+    y1 = y0 + cellSize
+
+    dtmTileName = tilePath / f"{i:03}_{j:03}.tif"
+
+    if not os.path.isfile(dtmTileName):
+        return False
+
+    dtmTileGeoGrid = fileIO.geoGrid(str(dtmTileName))
+    dtmTile = dtmTileGeoGrid.grid
+
+    # if noDataValue is not None and noDataReplacement is not None:
+    #     replaceArrayVals(dtmTile, arrayType(noDataValue), noDataReplacement)
+
+    wlGrid2 = numpy.zeros((dtmTileGeoGrid.xsz, dtmTileGeoGrid.ysz), dtype=arrayType) - 9999.
+    depthGrid = numpy.zeros((dtmTileGeoGrid.xsz, dtmTileGeoGrid.ysz), dtype=arrayType) - 9999.
+
+    resampleFunction(wlGrid, volGrid, flowX, flowY, zMin, zMax, \
+                     flowThreshold, \
+                     xll, yll, cellSize, xsz, ysz, dtmTile, dtmTileGeoGrid.dx, dtmTileGeoGrid.xsz, dtmTileGeoGrid.ysz, \
+                     x0, y0, wlGrid2, depthGrid)
+
+    tileString = f"{i:03d}_{j:03d}"
+
+    if depthGrid.max() == 0:
+        return False
+
+    fileIO.saveScalarGrid(depthGrid, x0, y0, dtmTileGeoGrid.dx, \
+                          outputFilePathRoot + "_depth_" + tileString + ".tif")
+
+
+    fileIO.saveScalarGrid(wlGrid2, x0, y0, dtmTileGeoGrid.dx, \
+                          outputFilePathRoot + "_wl_" + tileString + ".tif")
+
+    return True
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1527,7 +1594,7 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
                        flowThreshold,
                        noDataValue,noDataReplacement,
                        outputDirectory,outputPrefix,
-                       resampleFunction,saveCsv=True):
+                       resampleFunction,saveCsv=True, threads = None):
 
     outputFilePathRoot=os.path.join(outputDirectory,outputPrefix)
 
@@ -1537,81 +1604,120 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
     zMin[:,:]=storagePar[:,:,0]
     zMax[:,:]=storagePar[:,:,1]
 
-
     tileList = []
 
-    for iTile in range(557, 568): # range(xsz):
-        for jTile in range(322, 332): # ysz):
+    ticker=0
 
-            print("Processing tile %i/%i,%i/%i"%(iTile+1,xsz,jTile+1,ysz))
+    if xsz>100 or True:
+        tickerStep=int(xsz * ysz / 100)
+    else:
+        tickerStep=1
 
-            x0=xll+iTile*cellSize
-            x1=x0+cellSize
+    t1 = time.time()
 
-            y0=yll+jTile*cellSize
-            y1=y0+cellSize
+    first = True
+
+    if threads is None:
+        for iTile in [148]: #range(xsz):
+            for jTile in [72]: #range(ysz):
+
+                if (ticker % tickerStep) == 0:
+                    pc = int(100. * ticker / (xsz * ysz))
+                    print(f"{pc}%% {iTile}/{xsz},{jTile}/{ysz} " % (), end='')
+
+                    if ticker > 0:
+                        pcComplete = float(ticker) / (xsz * ysz)
+                        pcToGo = 1. - pcComplete
+                        t2 = time.time() - t1
+                        projectedFinish = time.time() + pcToGo * (t2 / pcComplete)
+
+                        if pcToGo * (t2 / pcComplete) < 86400:  # <1 day, report time only
+                            projectedFinishString = time.strftime("%H:%M:%S", time.localtime(projectedFinish))
+                        else:  # Report date too
+                            projectedFinishString = time.strftime("%d/%m/%y %H:%M:%S", time.localtime(projectedFinish))
+
+                        print(projectedFinishString, end='')
+
+                    print("...", end='', flush=True)
+                    sys.stdout.flush()
+
+                ticker += 1
+
+                tilePath = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles/")
+
+                if postProcessSingleCellTile(iTile, jTile, xll, yll, cellSize, tilePath, outputFilePathRoot, resampleFunction,
+                                             volGrid, wlGrid, flowX, flowY, zMin, zMax, flowThreshold):
+                    tileList.append((iTile, jTile))
+
+                    tileString = f"{iTile:03d}_{jTile:03d}"
+
+                    # depthGridName = outputFilePathRoot + "_depth_" + tileString + ".tif"
+                    # fileIO.uploadGridToDb2(depthGridName, 'test', 0.1, dropTable=first)
+                    # first = False
 
 
-            dtmTileName = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles")/f"{iTile:03}_{jTile:03}.tif"
+    else:
+        pool = ThreadPool(threads)
+        funcArgList = []
+        returnValues = []
+        for iTile, jTile in product(range(xsz), range(ysz)):
+            x0 = xll + iTile * cellSize
+            x1 = x0 + cellSize
+
+            y0 = yll + jTile * cellSize
+            y1 = y0 + cellSize
+
+            dtmTileName = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles") / f"{iTile:03}_{jTile:03}.tif"
 
             if not os.path.isfile(dtmTileName):
                 continue
 
-            try:
-                dtmTileGeoGrid = fileIO.geoGrid(str(dtmTileName))
-                dtmTile = dtmTileGeoGrid.grid
-            except:
-                pass
+            tilePath = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles/")
 
-            if noDataValue is not None and noDataReplacement is not None:
-                replaceArrayVals(dtmTile,arrayType(noDataValue),noDataReplacement)
+            funcArgList.append((iTile, jTile, xll, yll, cellSize, tilePath, outputFilePathRoot,
+                                         resampleFunction,
+                                         volGrid, wlGrid, flowX, flowY, zMin, zMax, flowThreshold))
 
-            wlGrid2=numpy.zeros((dtmTileGeoGrid.xsz,dtmTileGeoGrid.ysz),dtype=arrayType)-9999.
-            depthGrid=numpy.zeros((dtmTileGeoGrid.xsz,dtmTileGeoGrid.ysz),dtype=arrayType)-9999.
+        counter = 0
 
+        tickerStep=int(len(funcArgList) / 100)
+        ticker = 0
 
-            resampleFunction(wlGrid,volGrid,flowX,flowY,zMin,zMax, \
-                flowThreshold,\
-                xll,yll,cellSize,xsz,ysz,dtmTile,dtmTileGeoGrid.dx,dtmTileGeoGrid.xsz,dtmTileGeoGrid.ysz,\
-                x0,y0,wlGrid2,depthGrid)
+        for arg, ret in pool.imap(postProcessTile, funcArgList, chunksize=10):
 
-            tileString=f"{iTile:03d}_{jTile:03d}"
+            if (ticker%tickerStep)==0:
+                print("%i%% "%(100.*ticker/len(funcArgList)), end='')
 
-            try:
-                fileIO.saveScalarGrid(depthGrid,x0,y0,dtmTileGeoGrid.dx,\
-                    outputFilePathRoot+"_depth_"+tileString+".tif")
+                if ticker > 0:
+                    pcComplete = float(ticker) / len(funcArgList)
+                    pcToGo = 1. - pcComplete
+                    t2 = time.time() - t1
+                    projectedFinish = time.time() + pcToGo * (t2 / pcComplete)
+                    projectedFinishString = time.strftime("%H:%M:%S", time.localtime(projectedFinish))
+                    print(projectedFinishString, end='')
 
-                tileList.append((iTile, jTile))
-            except:
-                pass
+                print("...", end='')
+                sys.stdout.flush()
 
-            fileIO.saveScalarGrid(wlGrid2,x0,y0,dtmTileGeoGrid.dx,\
-                outputFilePathRoot+"_wl_"+tileString+".tif")
+            ticker += 1
+
+            if ret:
+                tileList.append((arg[0], arg[1]))
+
+        pass
+
+    print()
 
     # Build VRTs for grid outputs
     print("Generating VRTs...",)
 
     # Depths
-    vrtCommand=['gdal_merge.py']
-    vrtCommand += ['-o', outputFilePathRoot+'_depth.tif']
-    vrtCommand += ['-co', 'COMPRESS=LZW']
-    vrtCommand += ['-co', 'BIGTIFF=YES']
+    vrtCommand=['gdalbuildvrt']
+    vrtCommand += [outputFilePathRoot+'_depth.vrt']
 
     for iTile, jTile in tileList:
         tileString=f"{iTile:03d}_{jTile:03d}"
         vrtCommand.append(outputFilePathRoot+"_depth_"+tileString+".tif")
-
-    call(vrtCommand)
-
-    # Water levels
-    vrtCommand=['gdal_merge.py']
-    vrtCommand += ['-o', outputFilePathRoot+'_wl.tif']
-    vrtCommand += ['-co', 'COMPRESS=LZW']
-    vrtCommand += ['-co', 'BIGTIFF=YES']
-
-    for iTile, jTile in tileList:
-        tileString=f"{iTile:03d}_{jTile:03d}"
-        vrtCommand.append(outputFilePathRoot+"_wl_"+tileString+".tif")
 
     call(vrtCommand)
 
@@ -1623,6 +1729,11 @@ def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
             outputFilePathRoot+"_wl.csv", headerList=['WL'])
 
     # Remove temporary geotiffs
+    for iTile, jTile in tileList:
+        tileString=f"{iTile:03d}_{jTile:03d}"
+
+        os.remove(outputFilePathRoot+"_depth_"+tileString+".tif")
+        os.remove(outputFilePathRoot + "_wl_" + tileString + ".tif")
 
     return
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
