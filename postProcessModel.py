@@ -59,23 +59,23 @@ channel=False
 flowPathOutput=None
 extendWlGrid=False
 
-if processEnd:
-    wlFileName=os.path.join(resultsDirectory,resultsPrefix+'_wl.csv')
-    flowFileName=os.path.join(resultsDirectory,resultsPrefix+'_flow.csv')
-
-    wlGrid=fileIO.readCSV(wlFileName,"WL",xsz,ysz,dataType=sgrid.getPrecision())
-    flowX,flowY=fileIO.readFlowCsv(flowFileName,xsz,ysz,dataType=sgrid.getPrecision())
-
-    print("Resampling and saving end depths/flows to file...")
-
-    maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
-    wlGrid[maskList]=storagePar[:,:,0][maskList]
-
-    sgrid.saveResults(wlGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
-                       flowThreshold,
-                       noDataValue,noDataReplacement,
-                       resultsDirectory,resultsPrefix+'_final',cppResample3,
-                       saveCsv=True)
+# if processEnd:
+#     wlFileName=os.path.join(resultsDirectory,resultsPrefix+'_wl.csv')
+#     flowFileName=os.path.join(resultsDirectory,resultsPrefix+'_flow.csv')
+#
+#     wlGrid=fileIO.readCSV(wlFileName,"WL",xsz,ysz,dataType=sgrid.getPrecision())
+#     flowX,flowY=fileIO.readFlowCsv(flowFileName,xsz,ysz,dataType=sgrid.getPrecision())
+#
+#     print("Resampling and saving end depths/flows to file...")
+#
+#     maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
+#     wlGrid[maskList]=storagePar[:,:,0][maskList]
+#
+#     sgrid.saveResults(wlGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
+#                        flowThreshold,
+#                        noDataValue,noDataReplacement,
+#                        resultsDirectory,resultsPrefix+'_final',cppResample3,
+#                        saveCsv=True)
 
 
 if processMax:
@@ -90,11 +90,11 @@ if processMax:
     maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
     wlGrid[maskList]=storagePar[:,:,0][maskList]
 
-    sgrid.saveResults(wlGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
+    sgrid.saveResults(wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
                        flowThreshold,
                        noDataValue,noDataReplacement,
                        resultsDirectory,resultsPrefix+'_max',cppResample3,
-                       saveCsv=True, threads=None)
+                       threads=None)
 
 
 if useTempTopoFile:

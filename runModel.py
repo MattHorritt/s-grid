@@ -28,12 +28,12 @@ rainfallDepth=0. # In mm
 initialWlFile=None  # This can be used to specify initial water depths from a
                     # csv file output by a previos run - use None to turn off
 
-initialWL = 0.0
+initialWL = None
 
 pcRunoff=100.       # Percentage runoff
 
 saveMax=True # Set to true to save max water levels, flows etc
-saveEnd=True # Set to true to save final water levels, flows etc
+saveEnd=False # Set to true to save final water levels, flows etc
 
 # Baseflow - useful for groundwater contributions etc
 baseFlow=0.0 # in m3/s/km2, introduced into all cells
@@ -268,8 +268,10 @@ if saveEnd:
 if saveMax:
     cppWlFromVolGrid(maxVolGrid,wlGrid,storagePar,xsz,ysz,channel,cellSize)
 
-    maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
-    wlGrid[maskList]=storagePar[:,:,0][maskList]
+    # volGrid has 0 for dry (but potentially active) cells, need to apply some
+    # fettling to fix wlGrid so dry cells are ignored properly in post processing
+    wlGrid[storagePar[:,:,0] == -9999] = -9999 # Inactive cells
+    wlGrid[volGrid == 0] = -9999 # Dry cells
 
     fileIO.saveVectorCSV(maxFlowX,maxFlowY,xll,yll,cellSize,\
         os.path.join(outputDirectory,outputPrefix+"_max_flow.csv"),thresholdVal=1e-3)

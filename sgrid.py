@@ -18,6 +18,7 @@ from itertools import product
 import time
 from pathlib import Path
 import time
+from scipy.interpolate import RegularGridInterpolator
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 arrayType=numpy.float64
@@ -1588,152 +1589,104 @@ def postProcessSingleCellTile(i, j, xll, yll, cellSize, tilePath, outputFilePath
 
     return True
 
-
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-def saveResults(volGrid,wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
+def saveResults(wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
                        flowThreshold,
                        noDataValue,noDataReplacement,
                        outputDirectory,outputPrefix,
-                       resampleFunction,saveCsv=True, threads = None):
+                       resampleFunction, threads = None):
 
     outputFilePathRoot=os.path.join(outputDirectory,outputPrefix)
-
-    zMin=numpy.zeros((xsz,ysz),dtype=numpy.float32,order='C') # Should use array type
-    zMax=numpy.zeros((xsz,ysz),dtype=numpy.float32,order='C')
-
-    zMin[:,:]=storagePar[:,:,0]
-    zMax[:,:]=storagePar[:,:,1]
-
-    tileList = []
 
     ticker=0
 
     if xsz>100 or True:
-        tickerStep=int(xsz * ysz / 100)
+        tickerStep=int(xsz * ysz / 10)
     else:
         tickerStep=1
 
     t1 = time.time()
 
-    first = True
+    tileList = [] # Use this to track which TIFFs we need to merge later
 
-    if threads is None:
-        for iTile in [148]: #range(xsz):
-            for jTile in [72]: #range(ysz):
+    for i in range(1, xsz-1):
+        for j in range(1, ysz-1):
 
-                if (ticker % tickerStep) == 0:
-                    pc = int(100. * ticker / (xsz * ysz))
-                    print(f"{pc}%% {iTile}/{xsz},{jTile}/{ysz} " % (), end='')
-
-                    if ticker > 0:
-                        pcComplete = float(ticker) / (xsz * ysz)
-                        pcToGo = 1. - pcComplete
-                        t2 = time.time() - t1
-                        projectedFinish = time.time() + pcToGo * (t2 / pcComplete)
-
-                        if pcToGo * (t2 / pcComplete) < 86400:  # <1 day, report time only
-                            projectedFinishString = time.strftime("%H:%M:%S", time.localtime(projectedFinish))
-                        else:  # Report date too
-                            projectedFinishString = time.strftime("%d/%m/%y %H:%M:%S", time.localtime(projectedFinish))
-
-                        print(projectedFinishString, end='')
-
-                    print("...", end='', flush=True)
-                    sys.stdout.flush()
-
-                ticker += 1
-
-                tilePath = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles/")
-
-                if postProcessSingleCellTile(iTile, jTile, xll, yll, cellSize, tilePath, outputFilePathRoot, resampleFunction,
-                                             volGrid, wlGrid, flowX, flowY, zMin, zMax, flowThreshold):
-                    tileList.append((iTile, jTile))
-
-                    tileString = f"{iTile:03d}_{jTile:03d}"
-
-                    # depthGridName = outputFilePathRoot + "_depth_" + tileString + ".tif"
-                    # fileIO.uploadGridToDb2(depthGridName, 'test', 0.1, dropTable=first)
-                    # first = False
-
-
-    else:
-        pool = ThreadPool(threads)
-        funcArgList = []
-        returnValues = []
-        for iTile, jTile in product(range(xsz), range(ysz)):
-            x0 = xll + iTile * cellSize
-            x1 = x0 + cellSize
-
-            y0 = yll + jTile * cellSize
-            y1 = y0 + cellSize
-
-            dtmTileName = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles") / f"{iTile:03}_{jTile:03}.tif"
-
-            if not os.path.isfile(dtmTileName):
-                continue
-
-            tilePath = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles/")
-
-            funcArgList.append((iTile, jTile, xll, yll, cellSize, tilePath, outputFilePathRoot,
-                                         resampleFunction,
-                                         volGrid, wlGrid, flowX, flowY, zMin, zMax, flowThreshold))
-
-        counter = 0
-
-        tickerStep=int(len(funcArgList) / 100)
-        ticker = 0
-
-        for arg, ret in pool.imap(postProcessTile, funcArgList, chunksize=10):
-
-            if (ticker%tickerStep)==0:
-                print("%i%% "%(100.*ticker/len(funcArgList)), end='')
+            if (ticker % tickerStep) == 0:
+                pc = int(100. * ticker / (xsz * ysz))
+                print(f"{pc}%% {i}/{xsz},{j}/{ysz} " % (), end='')
 
                 if ticker > 0:
-                    pcComplete = float(ticker) / len(funcArgList)
+                    pcComplete = float(ticker) / (xsz * ysz)
                     pcToGo = 1. - pcComplete
                     t2 = time.time() - t1
                     projectedFinish = time.time() + pcToGo * (t2 / pcComplete)
-                    projectedFinishString = time.strftime("%H:%M:%S", time.localtime(projectedFinish))
+
+                    if pcToGo * (t2 / pcComplete) < 86400:  # <1 day, report time only
+                        projectedFinishString = time.strftime("%H:%M:%S", time.localtime(projectedFinish))
+                    else:  # Report date too
+                        projectedFinishString = time.strftime("%d/%m/%y %H:%M:%S", time.localtime(projectedFinish))
+
                     print(projectedFinishString, end='')
 
-                print("...", end='')
+                print("...", end='', flush=True)
                 sys.stdout.flush()
 
             ticker += 1
 
-            if ret:
-                tileList.append((arg[0], arg[1]))
+            if wlGrid[i,j] == -9999: # This should skip inactive and dry cells
+                continue
 
-        pass
 
-    print()
+            # Simple post process for now - subtract DTM from WL and save to tiff
+            tilePath = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles/")
+            dtmTileName = tilePath / f"{i:03}_{j:03}.tif"
 
-    # Build VRTs for grid outputs
-    print("Generating VRTs...",)
+            if not os.path.isfile(dtmTileName):
+                return False # Shouldn't get here as we're skipping inactive cells
+
+            dtmTileGeoGrid = fileIO.geoGrid(str(dtmTileName))
+            depthGrid = wlGrid[i,j] - dtmTileGeoGrid.grid
+            depthGrid[depthGrid < 0] = -9999
+
+            tileString = f"{i:03d}_{j:03d}"
+            fileIO.saveScalarGrid(depthGrid, dtmTileGeoGrid.xll, dtmTileGeoGrid.yll, dtmTileGeoGrid.dx,
+                                  outputFilePathRoot + "_depth_" + tileString + ".tif")
+
+            tileList.append((i,j))
+
+    pass
+
+    # Build VRTs for grid outputs for converting to TIFF later - this is much quicker than
+    # adding TIFFs individually using gdal_merge
+    print("Generating VRT...",)
 
     # Depths
     vrtCommand=['gdalbuildvrt']
     vrtCommand += [outputFilePathRoot+'_depth.vrt']
 
-    for iTile, jTile in tileList:
-        tileString=f"{iTile:03d}_{jTile:03d}"
+    for i, j in tileList:
+        tileString=f"{i:03d}_{j:03d}"
         vrtCommand.append(outputFilePathRoot+"_depth_"+tileString+".tif")
 
     call(vrtCommand)
 
-    if saveCsv:
-        fileIO.saveVectorCSV(flowX,flowY,xll,yll,cellSize,\
-            outputFilePathRoot+"_flow.csv",thresholdVal=flowThreshold)
+    print("Creating TIFF...",)
+    mergeCommand = ['gdal_translate']
+    mergeCommand+= ['-of', 'GTiff']
+    mergeCommand+= ['-co', 'COMPRESS=LZW']
+    mergeCommand+= ['-co', 'BIGTIFF=YES']
+    mergeCommand+= [outputFilePathRoot+"_depth.vrt"]
+    mergeCommand+= [outputFilePathRoot+"_depth.tif"]
 
-        fileIO.saveScalarCSV(wlGrid,xll,yll,cellSize,\
-            outputFilePathRoot+"_wl.csv", headerList=['WL'])
+    call(mergeCommand)
 
     # Remove temporary geotiffs
-    for iTile, jTile in tileList:
-        tileString=f"{iTile:03d}_{jTile:03d}"
-
+    print("Deleting temporary files...",)
+    for i, j in tileList:
+        tileString=f"{i:03d}_{j:03d}"
         os.remove(outputFilePathRoot+"_depth_"+tileString+".tif")
-        os.remove(outputFilePathRoot + "_wl_" + tileString + ".tif")
+    os.remove(outputFilePathRoot+'_depth.vrt')
 
     return
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1809,3 +1762,4 @@ def calcTimeStep(wlGrid,zGrid,dx):
         return 0.7*dx/numpy.sqrt(9.81*depth.max())
     else: # Assume depth = 1 if no depth yet
         return 0.7*dx/numpy.sqrt(9.81)
+
