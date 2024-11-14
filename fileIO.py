@@ -616,10 +616,10 @@ def saveScalarGridByte(s,xll,yll,dx,fileName):
 if __name__ == "__main__":
 
     # Test upload to DB
-    gridFileName = r"2m_EA_results/output_slr1p0_rp200_max_depth.vrt"
+    gridFileName = r"2m_EA_results/output_slr1p0_rp200_max_depth.tif"
 
     for d in [0, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0]:
         print("Processing threshold ", d)
         depthLabel = f"{d:.1f}"
         depthLabel = depthLabel.replace('.', 'p')
-        uploadGridToDb(gridFileName, f"slr1p0_rp200_d{depthLabel}", depthThreshold = d)
+        uploadGridToDb2(gridFileName, f"slr1p0_rp200_d{depthLabel}", depthThreshold = d, dropTable=True)
