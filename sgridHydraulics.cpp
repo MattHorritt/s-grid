@@ -1256,7 +1256,7 @@ extern "C" void resample3(float *wlArg, float *volGridArg,
 //    printf("zMin:\n");
 //    for(i=0;i<xsz;i++) for(j=0;j<ysz;j++) printf(" %0.3f",zMin(i,j));
 
-    printf("Tick...\n");
+//    printf("Tick...\n");
 
 	for(i=0;i<dtmXsz;i++) for(j=0;j<dtmYsz;j++)
 	{
@@ -1266,7 +1266,7 @@ extern "C" void resample3(float *wlArg, float *volGridArg,
 
 	for(i=0;i<xsz;i++) for(j=0;j<ysz;j++)
 	{
-		if(volGrid(i,j)<1e-3) continue;
+		// if(volGrid(i,j)<1e-3) continue;
 
             q1=qx(i+1,j);
             q2=qy(i,j+1);
@@ -1285,12 +1285,10 @@ extern "C" void resample3(float *wlArg, float *volGridArg,
 
 //            printf("zMin=%f wl=%f \n",zMin(i,j),wl(i,j));
 
-            if(i==148 && j==72)
-            {
-                printf("%i,%i\n", i, j);
-                printf("%f %f %f %f\n", q1, q2, q3, q4);
-                printf("%f %f %f\n", wl(i,j), zMin(i,j), zMax(i,j));
-            }
+//            if(i==148 && j==72)
+//            {
+
+//            }
 
             if( //(wl(i,j)-zMin(i,j))<0.5) continue;
 
@@ -1299,7 +1297,12 @@ extern "C" void resample3(float *wlArg, float *volGridArg,
                 (wl(i,j)>zMax(i,j))))
                 continue;
 
-            if(i==148 && j==72) printf("Tock...\n");
+            printf("%i,%i\n", i, j);
+            printf("%f %f %f %f\n", q1, q2, q3, q4);
+            printf("%f %f %f\n", wl(i,j), zMin(i,j), zMax(i,j));
+            printf("\n");
+
+//            if(i==148 && j==72) printf("Tock...\n");
 
 
 		xCell1=xll+i*dx;
@@ -1336,6 +1339,7 @@ extern "C" void resample3(float *wlArg, float *volGridArg,
 		{
                 if(ii<0 || ii>=dtmXsz || jj<0 || jj>=dtmYsz) continue; // Cell outside DTM
 
+            printf("Tick...\n");
 
 			xi=(dtmXll+ii*dtmCellSize-xc)/(0.5*dx);
 			yi=(dtmYll+jj*dtmCellSize-yc)/(0.5*dx);

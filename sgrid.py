@@ -546,7 +546,7 @@ def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, 
             return conveyanceValuesX, conveyanceValuesY, storageValues
 
         # Set values below high water to -10
-        lowWaterMask = fileIO.geoGrid("/merlin1/Projects/LTIS SLR/GIS/DTM/low_water_grid_2m.tif", objOnly=True)
+        lowWaterMask = fileIO.geoGrid("/merlin1/Projects/LTIS SLR/GIS/DTM/high_water_grid_2m.tif", objOnly=True)
         lowWaterMaskWindow = lowWaterMask.obj.ReadAsArray(xoff=xi0, yoff=dtm.ysz - 1 - yi1, xsize=windowXsz,
                                            ysize=windowYsz).transpose().copy()
         lowWaterMaskWindow = lowWaterMaskWindow[:, ::-1]
@@ -1533,7 +1533,6 @@ def __lowerChannelCells(topoProfile,dxt,width,depth,nChan,nFP):
         nList[i]=nChan
 
     return nList
-
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def saveResults(wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
