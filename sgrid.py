@@ -1575,16 +1575,32 @@ def getNeighbouringWl(i1, j1, i2, j2, qx, qy, flowThreshold, g):
 
 # Wrapper for interpolateTile for threading; unpacks arguments, saves to TIFF
 def interpolateTileWrapper(argTuple):
-    # argTuple = (i, j, wlGrid, dtmTileName, qx, qy, flowThreshold, method, saveWl)
+    # argTuple = (i, j, wlGrid, dtmTileName, qx, qy, flowThreshold, method, outputFilePathRoot, saveWl)
 
-    # if method = 1:
-    #
-    #
-    # else:
-    #
-    # depth, wl =
-    #
-    pass
+    i = argTuple[0]
+    j = argTuple[1]
+    wlGrid = argTuple[2]
+    dtmTileName = argTuple[3]
+    flowX = argTuple[4]
+    flowY = argTuple[5]
+    flowThreshold = argTuple[6]
+    method = argTuple[7]
+    outputFilePathRoot = argTuple[8]
+    saveWl = argTuple[9]
+
+    dtmTileGeoGrid = fileIO.geoGrid(dtmTileName)
+
+    depth, wl =  interpolateTile(i, j, wlGrid, dtmTileGeoGrid, flowX, flowY, flowThreshold, method = method)
+
+    tileString = f"{i:03d}_{j:03d}"
+    fileIO.saveScalarGrid(depth, dtmTileGeoGrid.xll, dtmTileGeoGrid.yll, dtmTileGeoGrid.dx,
+                          outputFilePathRoot + "_depth_" + tileString + ".tif")
+
+    if saveWl:
+        fileIO.saveScalarGrid(wl, dtmTileGeoGrid.xll, dtmTileGeoGrid.yll, dtmTileGeoGrid.dx,
+                              outputFilePathRoot + "_wl_" + tileString + ".tif")
+
+    return True
 
 def  interpolateTile(i, j, wlg, dtgg, qx, qy, flowThreshold, method = 1):
 
@@ -1687,7 +1703,6 @@ def saveResults(wlGrid,flowX,flowY,xsz,ysz,flowThreshold,
                 if wlGrid[i,j] == -9999: # This should skip inactive and dry cells
                     continue
 
-                # Simple post process for now - subtract DTM from WL and save to tiff
                 tilePath = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles/")
                 dtmTileName = tilePath / f"{i:03}_{j:03}.tif"
 
@@ -1708,43 +1723,45 @@ def saveResults(wlGrid,flowX,flowY,xsz,ysz,flowThreshold,
                     fileIO.saveScalarGrid(wl, dtmTileGeoGrid.xll, dtmTileGeoGrid.yll, dtmTileGeoGrid.dx,
                                           outputFilePathRoot + "_wl_" + tileString + ".tif")
     else: # Threaded
-        pass
-        # pool = ThreadPool(threads)
-        # funcArgList = []
-        # returnValues = []
-        # for i, j in product(range(xsz), range(ysz)):
-        #     funcArgList.append((i, j, xll, yll, cellSize, dtmFileName, nFP, conveyanceFunc, storageFunc,
-        #                                  None, clipRasterPolyName, rvs, saveDtmTiles, maskGrid))
-        #
-        # counter = 0
-        #
-        # tickerStep=int(xsz * ysz / 100)
-        # ticker = 0
-        #
-        # for arg, ret in pool.imap(processCellWrapper, funcArgList, chunksize=10):
-        #
-        #     if (ticker%tickerStep)==0:
-        #         print("%i%% "%(100.*ticker/(xsz * ysz)), end='')
-        #
-        #         if ticker > 0:
-        #             pcComplete = float(ticker) / (xsz * ysz)
-        #             pcToGo = 1. - pcComplete
-        #             t2 = time.time() - t1
-        #             projectedFinish = time.time() + pcToGo * (t2 / pcComplete)
-        #             projectedFinishString = time.strftime("%H:%M:%S", time.localtime(projectedFinish))
-        #             print(projectedFinishString, end='')
-        #
-        #         print("...", end='')
-        #         sys.stdout.flush()
-        #
-        #     ticker += 1
-        #
-        #     i = arg[0]
-        #     j = arg[1]
-        #     convParX[i, j, :] = ret[0]
-        #     convParY[i, j, :] = ret[1]
-        #     storagePar[i, j, :] = ret[2]
+        pool = ThreadPool(threads)
+        funcArgList = []
+        returnValues = []
+        for i, j in product(range(xsz), range(ysz)):
+            if wlGrid[i, j] == -9999:  # This should skip inactive and dry cells
+                continue
 
+            tileList.append((i, j))
+
+            tilePath = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles/")
+            dtmTileName = tilePath / f"{i:03}_{j:03}.tif"
+
+            funcArgList.append((i, j, wlGrid, dtmTileName, flowX, flowY, flowThreshold, method, outputFilePathRoot,
+                                saveWl))
+
+
+        counter = 0
+
+        tickerStep=int(xsz * ysz / 100)
+        ticker = 0
+
+
+        for ret in pool.imap(interpolateTileWrapper, funcArgList, chunksize=10):
+
+            if (ticker%tickerStep)==0:
+                print("%i%% "%(100.*ticker/(xsz * ysz)), end='')
+
+                if ticker > 0:
+                    pcComplete = float(ticker) / (xsz * ysz)
+                    pcToGo = 1. - pcComplete
+                    t2 = time.time() - t1
+                    projectedFinish = time.time() + pcToGo * (t2 / pcComplete)
+                    projectedFinishString = time.strftime("%H:%M:%S", time.localtime(projectedFinish))
+                    print(projectedFinishString, end='')
+
+                print("...", end='')
+                sys.stdout.flush()
+
+            ticker += 1
 
 
     # Build VRTs for grid outputs for converting to TIFF later - this is much quicker than

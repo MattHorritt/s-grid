@@ -59,42 +59,23 @@ channel=False
 flowPathOutput=None
 extendWlGrid=False
 
-if processEnd:
-    wlFileName=os.path.join(resultsDirectory,resultsPrefix+'_wl.csv')
-    flowFileName=os.path.join(resultsDirectory,resultsPrefix+'_flow.csv')
-
-    wlGrid=fileIO.readCSV(wlFileName,"WL",xsz,ysz,dataType=sgrid.getPrecision())
-    flowX,flowY=fileIO.readFlowCsv(flowFileName,xsz,ysz,dataType=sgrid.getPrecision())
-
-    print("Resampling and saving end depths/flows to file...")
-
-    maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
-    wlGrid[maskList]=storagePar[:,:,0][maskList]
-
-    sgrid.saveResults(wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
-                       flowThreshold,
-                       noDataValue,noDataReplacement,
-                       resultsDirectory,resultsPrefix+'_final',cppResample3,
-                       saveWl = True, method = 2)
 
 
-if processMax:
-    wlFileName=os.path.join(resultsDirectory,resultsPrefix+'_max_wl.csv')
-    flowFileName=os.path.join(resultsDirectory,resultsPrefix+'_max_flow.csv')
+wlFileName=os.path.join(resultsDirectory,resultsPrefix+'_max_wl.csv')
+flowFileName=os.path.join(resultsDirectory,resultsPrefix+'_max_flow.csv')
 
-    wlGrid=fileIO.readCSV(wlFileName,"WL",xsz,ysz,dataType=sgrid.getPrecision())
-    flowX,flowY=fileIO.readFlowCsv(flowFileName,xsz,ysz,dataType=sgrid.getPrecision())
+wlGrid=fileIO.readCSV(wlFileName,"WL",xsz,ysz,dataType=sgrid.getPrecision())
+flowX,flowY=fileIO.readFlowCsv(flowFileName,xsz,ysz,dataType=sgrid.getPrecision())
 
-    print("Resampling and saving max depths/flows to file...")
+print("Resampling and saving max depths/flows to file...")
 
-    maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
-    wlGrid[maskList]=storagePar[:,:,0][maskList]
+maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
+wlGrid[maskList]=storagePar[:,:,0][maskList]
 
-    sgrid.saveResults(wlGrid,flowX,flowY,storagePar,xsz,ysz,cellSize,xll,yll,
-                       flowThreshold,
-                       noDataValue,noDataReplacement,
-                       resultsDirectory,resultsPrefix+'_max',cppResample3,
-                       threads=None, saveWl = True, method = 2)
+sgrid.saveResults(wlGrid,flowX,flowY,xsz,ysz,
+                   flowThreshold,
+                   resultsDirectory,resultsPrefix+'_max',
+                   threads=10, saveWl = True, method = 2)
 
 
 if useTempTopoFile:
