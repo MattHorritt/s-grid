@@ -75,7 +75,7 @@ if processEnd:
                        flowThreshold,
                        noDataValue,noDataReplacement,
                        resultsDirectory,resultsPrefix+'_final',cppResample3,
-                       saveCsv=True)
+                       saveWl = True, method = 2)
 
 
 if processMax:
@@ -94,7 +94,7 @@ if processMax:
                        flowThreshold,
                        noDataValue,noDataReplacement,
                        resultsDirectory,resultsPrefix+'_max',cppResample3,
-                       threads=None)
+                       threads=None, saveWl = True, method = 2)
 
 
 if useTempTopoFile:
