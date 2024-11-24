@@ -494,12 +494,12 @@ def processCellWrapper(argTuple):
                 argTuple[3], argTuple[4], dtm,
                 argTuple[6], argTuple[7], argTuple[8],
                 nFileObj = argTuple[9], clipLyr = argTuple[10], rvs = argTuple[11],
-                saveDtmTiles = argTuple[12], maskGrid = argTuple[13])
+                saveDtmTiles = argTuple[12], maskGrid = argTuple[13], highWaterMaskFileName = argTuple[14])
 
     return argTuple, retTuple # Return arguments as well - useful for tracking the results
 
 def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, nFileObj = None, clipLyr = None,
-                rvs = None, saveDtmTiles = None, maskGrid = None):
+                rvs = None, saveDtmTiles = None, maskGrid = None, highWaterMaskFileName = None):
     # These are the square extents in map coordinates
     x0 = xll + i * cellSize
     x1 = x0 + cellSize
@@ -546,11 +546,12 @@ def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, 
             return conveyanceValuesX, conveyanceValuesY, storageValues
 
         # Set values below high water to -10
-        lowWaterMask = fileIO.geoGrid("/merlin1/Projects/LTIS SLR/GIS/DTM/high_water_grid_2m.tif", objOnly=True)
-        lowWaterMaskWindow = lowWaterMask.obj.ReadAsArray(xoff=xi0, yoff=dtm.ysz - 1 - yi1, xsize=windowXsz,
-                                           ysize=windowYsz).transpose().copy()
-        lowWaterMaskWindow = lowWaterMaskWindow[:, ::-1]
-        dtmWindow[numpy.where(lowWaterMaskWindow == 1)] = 20
+        if highWaterMaskFileName is not None:
+            highWaterMask = fileIO.geoGrid(highWaterMaskFileName, objOnly=True)
+            highWaterMaskWindow = highWaterMask.obj.ReadAsArray(xoff=xi0, yoff=dtm.ysz - 1 - yi1, xsize=windowXsz,
+                                               ysize=windowYsz).transpose().copy()
+            highWaterMaskWindow = highWaterMaskWindow[:, ::-1]
+            dtmWindow[numpy.where(highWaterMaskWindow == 1)] = 20
 
 
 
@@ -640,7 +641,8 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
     nFileName=None,
     plotNamePrefix=None, outputPrefix=None,
     rvs=None,ndr=None,conveyanceFunc=None,storageFunc=None,
-    clipRasterPolyName = None, threads = None, saveDtmTiles = None, maskGridName = None):
+    clipRasterPolyName = None, threads = None, saveDtmTiles = None, maskGridName = None,
+    highWaterMaskFileName = None):
 
     if plotNamePrefix is None:
         plotNamePrefix=""
@@ -674,10 +676,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
     ticker=0
 
-    if xsz>100:
-        tickerStep=int(xsz/100)
-    else:
-        tickerStep=1
+    tickerStep=int(xsz * ysz / 100)
 
     t1 = time.time()
 
@@ -728,7 +727,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
 
                 cX, cY, st = processCell(i, j, xll, yll, cellSize, dtm, nFP, conveyanceFunc, storageFunc,
                                          clipLyr = clipRasterPolyLayer, rvs = rvs, saveDtmTiles = saveDtmTiles,
-                                         maskGrid = maskGrid)
+                                         maskGrid = maskGrid, highWaterMaskFileName = highWaterMaskFileName)
 
                 convParX[i, j, :] = cX
                 convParY[i, j, :] = cY
@@ -739,7 +738,7 @@ def gridFlowSetupTiled(dtmFileName,xll,yll,cellSize,xsz,ysz,nChan,nFP,
         returnValues = []
         for i, j in product(range(xsz), range(ysz)):
             funcArgList.append((i, j, xll, yll, cellSize, dtmFileName, nFP, conveyanceFunc, storageFunc,
-                                         None, clipRasterPolyName, rvs, saveDtmTiles, maskGrid))
+                                         None, clipRasterPolyName, rvs, saveDtmTiles, maskGrid, highWaterMaskFileName))
 
         counter = 0
 
