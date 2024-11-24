@@ -121,13 +121,19 @@ def readPolylineShapefile(fileName,layerName=None):
         yl=[]
         geom=feature.GetGeometryRef()
 
-        for gr in range(geom.GetGeometryCount()):
-            g=geom.GetGeometryRef(gr)
-
-            for i in range(g.GetPointCount()):
-                pt=g.GetPoint(i)
+        if geom.GetGeometryCount() == 0:
+            for i in range(geom.GetPointCount()):
+                pt = geom.GetPoint(i)
                 xl.append(pt[0])
                 yl.append(pt[1])
+        else:
+            for gr in range(geom.GetGeometryCount()):
+                g=geom.GetGeometryRef(gr)
+
+                for i in range(g.GetPointCount()):
+                    pt=g.GetPoint(i)
+                    xl.append(pt[0])
+                    yl.append(pt[1])
 
         tmpDict={}
         for fn in fieldNames:

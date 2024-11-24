@@ -11,9 +11,9 @@ returnPeriod = float(sys.argv[2])
 
 print(f"Processing SLR={seaLevelRise} Rp={returnPeriod}")
 
-parametersFile="2m_EA_params.pck" # Output from buildModel.py
+parametersFile="2m_EA_100m_params.pck" # Output from buildModel.py
 
-outputDirectory="2m_EA_results" # Folder for results
+outputDirectory="2m_EA_100m_results" # Folder for results
 
 slrStr = f"{seaLevelRise:.1f}"
 slrStr = slrStr.replace('.', 'p')
@@ -43,7 +43,7 @@ minTimeStep=30.
 maxTimeStep=3600.
 
 defenceLineStr = r"PG: host=localhost dbname=ltis2025 active_schema=slr user=postgres password=postgres"
-layerName = "defence_toe_levels"
+layerName = "aims_ltis_inputs"
 # See comment "Add rainfall" for where to edit rainfall/runoff code
 # See comment "Apply water level boundary" for where to edit water level boundary conditions
 # See comment "Modify flow boundary" for where to edit flow boundary conditions

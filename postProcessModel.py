@@ -2,7 +2,7 @@
 import sys
 #############################################################################
 # Control Panel
-parametersFile="2m_EA_params.pck"
+parametersFile="2m_EA_100m_params.pck"
 
 # Topography
 dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range.tif"
@@ -13,13 +13,11 @@ noDataValue=None
 noDataReplacement=None
 
 # Folder and first part of filename where CSV outputs from buildModel are stored
-resultsDirectory="2m_EA_results"
+resultsDirectory="2m_EA_100m_results"
 resultsPrefix=sys.argv[1]
 
-processMax=True # Set to true to save max water levels, flows etc
-processEnd=False # Set to true to save final water levels, flows etc
+threads = 12
 
-defaultDepth=1.0    # Depth burnt into flow paths
 flowThreshold=1.0   # Use this to switch off interpolation between cells with
                     # flows below this value
 
@@ -41,12 +39,12 @@ file=open(parametersFile, 'rb')
 (xll,yll,cellSize,xsz,ysz,convParX,convParY,storagePar)=pickle.load(file)
 file.close()
 
-(cppCalcFlow,cppCalcFlowGrid,cppDryCheck,cppTimeStep,cppWlFromVolGrid,\
-    cppConveyanceParameters,cppMaxVolGrid,cppResample2,cppResample3, \
-    cppFlowPaths,cppSum,cppCalcStorageParameters,cppLazyFlowPaths, \
-    cppWlFill,cppBurnFlowPaths,cppMakeWlGrid,cppClipZero,cppDryCheckDiagnostic,
-    cppScsAdditionalRunoff,cppCalcFlowEdges,cppCheckLicence)=\
-    sgrid.loadCppLib(extLibName)
+# (cppCalcFlow,cppCalcFlowGrid,cppDryCheck,cppTimeStep,cppWlFromVolGrid,\
+#     cppConveyanceParameters,cppMaxVolGrid,cppResample2,cppResample3, \
+#     cppFlowPaths,cppSum,cppCalcStorageParameters,cppLazyFlowPaths, \
+#     cppWlFill,cppBurnFlowPaths,cppMakeWlGrid,cppClipZero,cppDryCheckDiagnostic,
+#     cppScsAdditionalRunoff,cppCalcFlowEdges,cppCheckLicence)=\
+#     sgrid.loadCppLib(extLibName)
 
 if useTempTopoFile:
     tmpDtmFileName=sgrid.uncompressGeoTiff(dtmFileName,tiled=True)
@@ -70,12 +68,12 @@ flowX,flowY=fileIO.readFlowCsv(flowFileName,xsz,ysz,dataType=sgrid.getPrecision(
 print("Resampling and saving max depths/flows to file...")
 
 maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
-wlGrid[maskList]=storagePar[:,:,0][maskList]
+wlGrid[maskList]= -9999 # storagePar[:,:,0][maskList]
 
-sgrid.saveResults(wlGrid,flowX,flowY,xsz,ysz,
-                   flowThreshold,
+sgrid.saveResults(wlGrid,flowX,flowY,xsz,ysz, xll, yll, cellSize,
+                   flowThreshold, dtmFileName,
                    resultsDirectory,resultsPrefix+'_max',
-                   threads=10, saveWl = True, method = 2)
+                   threads=threads, saveWl = True, method = 2)
 
 
 if useTempTopoFile:

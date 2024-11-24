@@ -1574,53 +1574,77 @@ def getNeighbouringWl(i1, j1, i2, j2, qx, qy, flowThreshold, g):
 
 # Wrapper for interpolateTile for threading; unpacks arguments, saves to TIFF
 def interpolateTileWrapper(argTuple):
-    # argTuple = (i, j, wlGrid, dtmTileName, qx, qy, flowThreshold, method, outputFilePathRoot, saveWl)
 
     i = argTuple[0]
     j = argTuple[1]
     wlGrid = argTuple[2]
-    dtmTileName = argTuple[3]
+    dtmFileName = argTuple[3]
     flowX = argTuple[4]
     flowY = argTuple[5]
     flowThreshold = argTuple[6]
     method = argTuple[7]
     outputFilePathRoot = argTuple[8]
     saveWl = argTuple[9]
+    xsz = argTuple[10]
+    ysz = argTuple[11]
+    cellSize = argTuple[12]
+    xll = argTuple[13]
+    yll = argTuple[14]
 
-    dtmTileGeoGrid = fileIO.geoGrid(dtmTileName)
+    x0 = xll + i * cellSize
+    x1 = x0 + cellSize
+    y0 = yll + j * cellSize
+    y1 = y0 + cellSize
 
-    depth, wl =  interpolateTile(i, j, wlGrid, dtmTileGeoGrid, flowX, flowY, flowThreshold, method = method)
+    dtmFileGeoGrid = fileIO.geoGrid(str(dtmFileName), objOnly=True)
+    dx = dtmFileGeoGrid.dx
+
+    xi0 = int((x0 - dtmFileGeoGrid.xll) / dtmFileGeoGrid.dx)
+    xi1 = int((x1 - dtmFileGeoGrid.xll) / dtmFileGeoGrid.dx) - 1
+    yi0 = int((y0 - dtmFileGeoGrid.yll) / dtmFileGeoGrid.dx)
+    yi1 = int((y1 - dtmFileGeoGrid.yll) / dtmFileGeoGrid.dx) - 1
+
+    windowXsz = xi1 - xi0 + 1
+    windowYsz = yi1 - yi0 + 1
+
+    dtmTile = dtmFileGeoGrid.obj.ReadAsArray(xoff=xi0, yoff=dtmFileGeoGrid.ysz - 1 - yi1, xsize=windowXsz,
+                                             ysize=windowYsz).transpose().copy()
+    dtmTile = numpy.array(dtmTile[:, ::-1], arrayType)
+
+
+    depth, wl =  interpolateTile(i, j, wlGrid, dtmTile, xi0, yi0, dx, flowX, flowY, flowThreshold, method = method)
 
     tileString = f"{i:03d}_{j:03d}"
-    fileIO.saveScalarGrid(depth, dtmTileGeoGrid.xll, dtmTileGeoGrid.yll, dtmTileGeoGrid.dx,
+    fileIO.saveScalarGrid(depth, x0, y0, dtmFileGeoGrid.dx,
                           outputFilePathRoot + "_depth_" + tileString + ".tif")
 
     if saveWl:
-        fileIO.saveScalarGrid(wl, dtmTileGeoGrid.xll, dtmTileGeoGrid.yll, dtmTileGeoGrid.dx,
+        fileIO.saveScalarGrid(wl, x0, y0, dtmFileGeoGrid.dx,
                               outputFilePathRoot + "_wl_" + tileString + ".tif")
 
     return True
 
-def  interpolateTile(i, j, wlg, dtgg, qx, qy, flowThreshold, method = 1):
+
+def  interpolateTile(i, j, wlg, dtmTile, xll, yll, dx, qx, qy, flowThreshold, method = 1):
+
+    dxsz, dysz = dtmTile.shape
 
     if method == 1:
-        depth = wlg[i, j] - dtgg.grid
+        depth = wlg[i, j] - dtmTile
         depth[depth < 0] = -9999
 
-        wl = numpy.zeros((dtgg.xsz, dtgg.ysz)) - 9999
-        wl[wlg[i, j] > dtgg.grid] = wlg[i, j]
+        wl = numpy.zeros((dxsz, dysz)) - 9999
+        wl[wlg[i, j] > dtmTile] = wlg[i, j]
 
         return depth, wl
 
     xsz, ysz = wlg.shape
-    dxsz = dtgg.xsz
-    dysz = dtgg.ysz
 
-    dxsz2 = int(dtgg.xsz / 2)
-    dysz2 = int(dtgg.ysz / 2)
+    dxsz2 = int(dxsz / 2)
+    dysz2 = int(dysz / 2)
 
-    wl = numpy.zeros((dtgg.xsz, dtgg.ysz))
-    depth = numpy.zeros((dtgg.xsz, dtgg.ysz))
+    wl = numpy.zeros((dxsz, dysz))
+    depth = numpy.zeros((dxsz, dysz))
 
     y = numpy.vstack([numpy.linspace(0,0.5,dxsz2+1)[1:]] * dxsz2)
     x = y[:,:].transpose()
@@ -1649,14 +1673,15 @@ def  interpolateTile(i, j, wlg, dtgg, qx, qy, flowThreshold, method = 1):
     wl[0:dxsz2, 0:dysz2] = z0 + (z1 - z0) * x[::-1, :] + (z2 - z0) * y[:,::-1]
 
     # Calculate depth from water level and assign no data cells
-    depth = wl - dtgg.grid
+    depth = wl - dtmTile
     depth[depth<=0] = -9999
     wl[depth == -9999] = -9999
 
     return depth, wl
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-def saveResults(wlGrid,flowX,flowY,xsz,ysz,flowThreshold,
+def saveResults(wlGrid,flowX,flowY,xsz,ysz, xll, yll, cellSize,
+                flowThreshold, dtmFileName,
                        outputDirectory,outputPrefix,
                        threads = None, method = 1, saveWl = False):
 
@@ -1702,24 +1727,37 @@ def saveResults(wlGrid,flowX,flowY,xsz,ysz,flowThreshold,
                 if wlGrid[i,j] == -9999: # This should skip inactive and dry cells
                     continue
 
-                tilePath = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles/")
-                dtmTileName = tilePath / f"{i:03}_{j:03}.tif"
+                x0 = xll + i * cellSize
+                x1 = x0 + cellSize
+                y0 = yll + j * cellSize
+                y1 = y0 + cellSize
 
-                if not os.path.isfile(dtmTileName):
-                    return False # Shouldn't get here as we're skipping inactive cells
+                dtmFileGeoGrid = fileIO.geoGrid(str(dtmFileName), objOnly=True)
 
-                dtmTileGeoGrid = fileIO.geoGrid(str(dtmTileName))
+                xi0 = int((x0 - dtmFileGeoGrid.xll) / dtmFileGeoGrid.dx)
+                xi1 = int((x1 - dtmFileGeoGrid.xll) / dtmFileGeoGrid.dx) - 1
+                yi0 = int((y0 - dtmFileGeoGrid.yll) / dtmFileGeoGrid.dx)
+                yi1 = int((y1 - dtmFileGeoGrid.yll) / dtmFileGeoGrid.dx) - 1
 
-                depthGrid, wl = interpolateTile(i, j, wlGrid, dtmTileGeoGrid, flowX, flowY, flowThreshold, method)
+                windowXsz = xi1 - xi0 + 1
+                windowYsz = yi1 - yi0 + 1
+
+                dtmTile = dtmFileGeoGrid.obj.ReadAsArray(xoff=xi0, yoff=dtmFileGeoGrid.ysz - 1 - yi1, xsize=windowXsz,
+                                                ysize=windowYsz).transpose().copy()
+                dtmTile = numpy.array(dtmTile[:, ::-1], arrayType)
+
+                depthGrid, wl = interpolateTile(i, j, wlGrid,
+                                                dtmTile, xi0, yi0, dtmFileGeoGrid.dx,
+                                                flowX, flowY, flowThreshold, method)
 
                 tileString = f"{i:03d}_{j:03d}"
-                fileIO.saveScalarGrid(depthGrid, dtmTileGeoGrid.xll, dtmTileGeoGrid.yll, dtmTileGeoGrid.dx,
+                fileIO.saveScalarGrid(depthGrid, x0, y0, dtmFileGeoGrid.dx,
                                       outputFilePathRoot + "_depth_" + tileString + ".tif")
 
                 tileList.append((i,j))
 
                 if saveWl:
-                    fileIO.saveScalarGrid(wl, dtmTileGeoGrid.xll, dtmTileGeoGrid.yll, dtmTileGeoGrid.dx,
+                    fileIO.saveScalarGrid(wl, x0, y0, dtmFileGeoGrid.dx,
                                           outputFilePathRoot + "_wl_" + tileString + ".tif")
     else: # Threaded
         pool = ThreadPool(threads)
@@ -1731,26 +1769,22 @@ def saveResults(wlGrid,flowX,flowY,xsz,ysz,flowThreshold,
 
             tileList.append((i, j))
 
-            tilePath = Path("/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range_tiles/")
-            dtmTileName = tilePath / f"{i:03}_{j:03}.tif"
-
-            funcArgList.append((i, j, wlGrid, dtmTileName, flowX, flowY, flowThreshold, method, outputFilePathRoot,
-                                saveWl))
-
+            funcArgList.append((i, j, wlGrid, dtmFileName, flowX, flowY, flowThreshold, method, outputFilePathRoot,
+                                saveWl, xsz, ysz, cellSize, xll, yll))
 
         counter = 0
 
-        tickerStep=int(xsz * ysz / 100)
+        tickerStep=int(len(tileList) / 100)
         ticker = 0
 
 
         for ret in pool.imap(interpolateTileWrapper, funcArgList, chunksize=10):
 
             if (ticker%tickerStep)==0:
-                print("%i%% "%(100.*ticker/(xsz * ysz)), end='')
+                print("%i%% "%(100.*ticker/(len(tileList))), end='')
 
                 if ticker > 0:
-                    pcComplete = float(ticker) / (xsz * ysz)
+                    pcComplete = float(ticker) / (len(tileList))
                     pcToGo = 1. - pcComplete
                     t2 = time.time() - t1
                     projectedFinish = time.time() + pcToGo * (t2 / pcComplete)
@@ -1765,6 +1799,7 @@ def saveResults(wlGrid,flowX,flowY,xsz,ysz,flowThreshold,
 
     # Build VRTs for grid outputs for converting to TIFF later - this is much quicker than
     # adding TIFFs individually using gdal_merge
+    print()
     print("Generating VRT(s)...",)
 
     # Depths
