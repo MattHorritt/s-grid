@@ -542,8 +542,8 @@ def processCell(i, j, xll, yll, cellSize, dtm, nFp, conveyanceFunc,storageFunc, 
                     dtmWindow[numpy.where(dtmWindow == v1)] = v2
 
         # TODO Might need to remove this
-        if dtmWindow.max() < 1.0:
-            return conveyanceValuesX, conveyanceValuesY, storageValues
+        # if dtmWindow.max() < 1.0:
+        #     return conveyanceValuesX, conveyanceValuesY, storageValues
 
         # Set values below high water to -10
         if highWaterMaskFileName is not None:
