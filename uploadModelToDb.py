@@ -18,10 +18,10 @@ outputDirectory="2m_EA_results" # Folder for results
 outputFilePathRoot = os.path.join(outputDirectory, resultsPrefix)
 gridFileName = outputFilePathRoot+"_max_depth.tif"
 
-threads = 8
+threads = 2
 
 if threads is None:
-    for d in [0, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0]:
+    for d in [0, 0.2]:
         print("Processing threshold ", d)
         depthLabel = f"{d:.1f}"
         depthLabel = depthLabel.replace('.', 'p')
@@ -31,7 +31,7 @@ else:
     pool = ThreadPool(threads)
     funcArgList = []
 
-    for d in [0, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0]:
+    for d in [0, 0.2]:
         depthLabel = f"{d:.1f}"
         depthLabel = depthLabel.replace('.', 'p')
         tableName = resultsPrefix+f"_d{depthLabel}"

@@ -3,6 +3,8 @@
 __pycache__/*
 *.so
 *.o
+*.so
+.idea/*
 *.tif
 *.tiff
 *.csvt

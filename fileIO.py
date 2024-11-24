@@ -563,24 +563,26 @@ def uploadGridToDb2(depthGridFileName, outputTableName, depthThreshold = None, d
 
 
     print(f"Processing depth grid {depthGridFileName}... ", end='')
+    tmpName = next(tempfile._get_candidate_names())
+
 
     # Threshold into extent
-    tmpExtentFileName=next(tempfile._get_candidate_names())+'.tiff'
+    tmpExtentFileName = tmpName + '.tiff'
 
     gdalCmdStr='gdal_calc.py -A %s --calc="A>%f" --outfile=%s --type=Byte'\
         %(depthGridFileName,depthThreshold,tmpExtentFileName)
     os.system(gdalCmdStr) # + ' > /dev/null 2>&1')
 
     # Convert to vector and load to PostGIS table - use temporary table for now
-    cur.execute("drop table if exists slr.tmp")
+    cur.execute("drop table if exists slr.%s"%(tmpName))
 
-    gdalCmdStr='gdal_polygonize.py %s -f PostgreSQL  %s tmp'%(tmpExtentFileName,pgStr)
+    gdalCmdStr='gdal_polygonize.py %s -f PostgreSQL  %s %s'%(tmpExtentFileName,pgStr,tmpName)
     os.system(gdalCmdStr) # + ' > /dev/null 2>&1')
 
     os.remove(tmpExtentFileName)
 
     # Remove dn=0 polygons
-    cur.execute("delete from slr.tmp where dn=0 or dn is NULL")
+    cur.execute("delete from slr.%s where dn=0 or dn is NULL"%(tmpName))
 
     # Merge outputs to output table
     if dropTable:
@@ -590,11 +592,11 @@ def uploadGridToDb2(depthGridFileName, outputTableName, depthThreshold = None, d
         cur.execute(sqlStr)
 
     # Copy rows from slr.tmp into output table
-    sqlStr = 'insert into slr.%s select %s, wkb_geometry from slr.tmp' % (outputTableName, depthThreshold)
+    sqlStr = 'insert into slr.%s select %s, wkb_geometry from slr.%s' % (outputTableName, depthThreshold, tmpName)
     cur.execute(sqlStr)
 
     # And delete tmp files
-    sqlStr='drop table if exists slr.tmp '
+    sqlStr='drop table if exists slr.%s '%(tmpName)
     cur.execute(sqlStr)
 
     return
