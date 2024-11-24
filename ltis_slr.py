@@ -31,7 +31,10 @@ def slr_tide_points(slr, returnPeriod, defenceLineStr, xll, yll, xsz, ysz, cellS
         t1 = tidePointsRaw[i][2]["t1"]
         t200 = tidePointsRaw[i][2][f"t{returnPeriod:.0f}"]
 
-        toeLevel = tidePointsRaw[i][2]["toe_level_avg"]
+        toeLevel = tidePointsRaw[i][2]["toe_level"]
+
+        if toeLevel is None:
+            continue
 
         if toeLevel > (slr - minWaveHeight):
             continue
