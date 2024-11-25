@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 import time
 from scipy.interpolate import RegularGridInterpolator
+import psycopg2
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 arrayType=numpy.float64
@@ -1680,10 +1681,70 @@ def  interpolateTile(i, j, wlg, dtmTile, xll, yll, dx, qx, qy, flowThreshold, me
     return depth, wl
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+def uploadTileToDb(tileGridName, tableName, append, label, thresh):
+    pgStr='PG:"dbname=ltis2025 host=localhost password=''postgres'' port=5432 user=postgres ACTIVE_SCHEMA=slr"'
+
+    try:
+        conn = psycopg2.connect("dbname='ltis2025' port=5432 user='postgres' host='localhost' password='postgres'")
+    except:
+        print
+        "Unable to connect to the database"
+
+    conn.autocommit = True
+
+    cur = conn.cursor()
+
+    # Does table already exist?
+    l = cur.execute("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_schema = 'slr' AND table_name = '%s')"%tableName)
+    l = cur.fetchall()
+    alreadyExists = bool(l[0][0])
+
+    if not alreadyExists:
+        cur.execute("create table slr.%s (label char varying, geom geometry)"%tableName)
+    elif not append:
+        cur.execute("drop table slr.%s"%tableName)
+        cur.execute("create table slr.%s (label char varying, geom geometry)"%tableName)
+
+
+    tmpName = next(tempfile._get_candidate_names())
+
+    # Threshold into extent
+    tmpExtentFileName = tmpName + '.tiff'
+
+    gdalCmdStr='gdal_calc.py -A %s --calc="A>%f" --outfile=%s --type=Byte'\
+        %(tileGridName,thresh,tmpExtentFileName)
+    os.system(gdalCmdStr + ' > /dev/null 2>&1')
+
+    # Convert to vector and load to PostGIS table - use temporary table for now
+    cur.execute('drop table if exists slr."%s"'%(tmpName))
+
+    gdalCmdStr='gdal_polygonize.py %s -f PostgreSQL  %s %s'%(tmpExtentFileName,pgStr,tmpName)
+    os.system(gdalCmdStr + ' > /dev/null 2>&1')
+
+    os.remove(tmpExtentFileName)
+
+    # Remove dn=0 polygons
+    cur.execute('delete from slr."%s" where dn=0 or dn is NULL'%(tmpName))
+
+    # Copy rows from slr.tmp into output table
+    sqlStr = 'insert into slr.%s select \'%s\', wkb_geometry from slr."%s"' % (tableName, label, tmpName)
+    cur.execute(sqlStr)
+
+    # And delete tmp files
+    sqlStr='drop table if exists slr."%s" '%(tmpName)
+    cur.execute(sqlStr)
+
+    return
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def saveResults(wlGrid,flowX,flowY,xsz,ysz, xll, yll, cellSize,
                 flowThreshold, dtmFileName,
                        outputDirectory,outputPrefix,
-                       threads = None, method = 1, saveWl = False):
+                       threads = None, method = 1, saveWl = False,
+                       dbTableName = None, appendDbTable = True, dbLabel = None, dbDryThresh = None):
 
     outputFilePathRoot=os.path.join(outputDirectory,outputPrefix)
 
@@ -1759,6 +1820,12 @@ def saveResults(wlGrid,flowX,flowY,xsz,ysz, xll, yll, cellSize,
                 if saveWl:
                     fileIO.saveScalarGrid(wl, x0, y0, dtmFileGeoGrid.dx,
                                           outputFilePathRoot + "_wl_" + tileString + ".tif")
+
+                if dbTableName is not None:
+                    uploadTileToDb(outputFilePathRoot + "_depth_" + tileString + ".tif",
+                                   dbTableName, appendDbTable, dbLabel, dbDryThresh)
+                    appendDbTable = True
+
     else: # Threaded
         pool = ThreadPool(threads)
         funcArgList = []

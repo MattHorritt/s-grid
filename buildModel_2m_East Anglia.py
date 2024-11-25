@@ -30,7 +30,7 @@ nFloodplain=0.06    # Can omit this if grid data supplied
 nFloodplainFile=None # Raster file of roughness, with same size/res as DTM
 
 # Output options
-outputPrefix = '2m_EA_100m_'
+outputPrefix = '2m_EA_'
 outputFile= outputPrefix+"params.pck"
 gridFileName=outputPrefix+"grid.csv"
 saveDtmTiles = True

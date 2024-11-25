@@ -11,9 +11,9 @@ returnPeriod = float(sys.argv[2])
 
 print(f"Processing SLR={seaLevelRise} Rp={returnPeriod}")
 
-parametersFile="2m_EA_100m_params.pck" # Output from buildModel.py
+parametersFile="2m_EA_params.pck" # Output from buildModel.py
 
-outputDirectory="2m_EA_100m_results" # Folder for results
+outputDirectory="2m_EA_results" # Folder for results
 
 slrStr = f"{seaLevelRise:.1f}"
 slrStr = slrStr.replace('.', 'p')
