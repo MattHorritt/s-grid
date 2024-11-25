@@ -16,7 +16,7 @@ noDataReplacement=None
 resultsDirectory="2m_EA_results"
 resultsPrefix=sys.argv[1]
 
-threads = None
+threads = 12
 
 flowThreshold=1.0   # Use this to switch off interpolation between cells with
                     # flows below this value

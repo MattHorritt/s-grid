@@ -1592,6 +1592,10 @@ def interpolateTileWrapper(argTuple):
     xll = argTuple[13]
     yll = argTuple[14]
 
+    dbTableName = argTuple[15]
+    dbLabel = argTuple[16]
+    dbDryThresh = argTuple[17]
+
     x0 = xll + i * cellSize
     x1 = x0 + cellSize
     y0 = yll + j * cellSize
@@ -1622,6 +1626,10 @@ def interpolateTileWrapper(argTuple):
     if saveWl:
         fileIO.saveScalarGrid(wl, x0, y0, dtmFileGeoGrid.dx,
                               outputFilePathRoot + "_wl_" + tileString + ".tif")
+
+    if dbTableName is not None:
+        uploadTileToDb(outputFilePathRoot + "_depth_" + tileString + ".tif",
+                       dbTableName, dbLabel, dbDryThresh)
 
     return True
 
@@ -1859,7 +1867,8 @@ def saveResults(wlGrid,flowX,flowY,xsz,ysz, xll, yll, cellSize,
             tileList.append((i, j))
 
             funcArgList.append((i, j, wlGrid, dtmFileName, flowX, flowY, flowThreshold, method, outputFilePathRoot,
-                                saveWl, xsz, ysz, cellSize, xll, yll))
+                                saveWl, xsz, ysz, cellSize, xll, yll, dbTableName, dbLabel, dbDryThresh))
+
 
         counter = 0
 
