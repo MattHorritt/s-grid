@@ -1681,10 +1681,28 @@ def  interpolateTile(i, j, wlg, dtmTile, xll, yll, dx, qx, qy, flowThreshold, me
     return depth, wl
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Utility to drop/create output table on DB
+def createDbOutputTable(tableName):
+    pgStr = 'PG:"dbname=ltis2025 host=localhost password=''postgres'' port=5432 user=postgres ACTIVE_SCHEMA=slr"'
+
+    try:
+        conn = psycopg2.connect("dbname='ltis2025' port=5432 user='postgres' host='localhost' password='postgres'")
+    except:
+        print
+        "Unable to connect to the database"
+
+    conn.autocommit = True
+
+    cur = conn.cursor()
+
+    cur.execute("drop table if exists slr.%s" % tableName)
+    cur.execute("create table slr.%s (label char varying, geom geometry)" % tableName)
+
+    return
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-def uploadTileToDb(tileGridName, tableName, append, label, thresh):
+def uploadTileToDb(tileGridName, tableName, label, thresh):
     pgStr='PG:"dbname=ltis2025 host=localhost password=''postgres'' port=5432 user=postgres ACTIVE_SCHEMA=slr"'
 
     try:
@@ -1697,16 +1715,16 @@ def uploadTileToDb(tileGridName, tableName, append, label, thresh):
 
     cur = conn.cursor()
 
-    # Does table already exist?
-    l = cur.execute("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_schema = 'slr' AND table_name = '%s')"%tableName)
-    l = cur.fetchall()
-    alreadyExists = bool(l[0][0])
-
-    if not alreadyExists:
-        cur.execute("create table slr.%s (label char varying, geom geometry)"%tableName)
-    elif not append:
-        cur.execute("drop table slr.%s"%tableName)
-        cur.execute("create table slr.%s (label char varying, geom geometry)"%tableName)
+    # # Does table already exist?
+    # l = cur.execute("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_schema = 'slr' AND table_name = '%s')"%tableName)
+    # l = cur.fetchall()
+    # alreadyExists = bool(l[0][0])
+    #
+    # if not alreadyExists:
+    #     cur.execute("create table slr.%s (label char varying, geom geometry)"%tableName)
+    # elif not append:
+    #     cur.execute("drop table slr.%s"%tableName)
+    #     cur.execute("create table slr.%s (label char varying, geom geometry)"%tableName)
 
 
     tmpName = next(tempfile._get_candidate_names())
@@ -1745,6 +1763,10 @@ def saveResults(wlGrid,flowX,flowY,xsz,ysz, xll, yll, cellSize,
                        outputDirectory,outputPrefix,
                        threads = None, method = 1, saveWl = False,
                        dbTableName = None, appendDbTable = True, dbLabel = None, dbDryThresh = None):
+
+    # If we're not appending to existing table, create a new one
+    if dbTableName is not None and not appendDbTable:
+        createDbOutputTable(dbTableName)
 
     outputFilePathRoot=os.path.join(outputDirectory,outputPrefix)
 
@@ -1823,8 +1845,8 @@ def saveResults(wlGrid,flowX,flowY,xsz,ysz, xll, yll, cellSize,
 
                 if dbTableName is not None:
                     uploadTileToDb(outputFilePathRoot + "_depth_" + tileString + ".tif",
-                                   dbTableName, appendDbTable, dbLabel, dbDryThresh)
-                    appendDbTable = True
+                                   dbTableName, dbLabel, dbDryThresh)
+
 
     else: # Threaded
         pool = ThreadPool(threads)
