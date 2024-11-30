@@ -1708,6 +1708,23 @@ def createDbOutputTable(tableName):
 
     return
 
+def dbTableExists(tableName):
+    pgStr='PG:"dbname=ltis2025 host=localhost password=''postgres'' port=5432 user=postgres ACTIVE_SCHEMA=slr"'
+
+    try:
+        conn = psycopg2.connect("dbname='ltis2025' port=5432 user='postgres' host='localhost' password='postgres'")
+    except:
+        print
+        "Unable to connect to the database"
+
+    conn.autocommit = True
+
+    cur = conn.cursor()
+
+    l = cur.execute("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_schema = 'slr' AND table_name = '%s')"%tableName)
+    l = cur.fetchall()
+
+    return bool(l[0][0])
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def uploadTileToDb(tileGridName, tableName, label, thresh):
@@ -1773,7 +1790,7 @@ def saveResults(wlGrid,flowX,flowY,xsz,ysz, xll, yll, cellSize,
                        dbTableName = None, appendDbTable = True, dbLabel = None, dbDryThresh = None):
 
     # If we're not appending to existing table, create a new one
-    if dbTableName is not None and not appendDbTable:
+    if dbTableName is not None and (not appendDbTable or not dbTableExists(dbTableName)):
         createDbOutputTable(dbTableName)
 
     outputFilePathRoot=os.path.join(outputDirectory,outputPrefix)

@@ -16,12 +16,12 @@ noDataReplacement=None
 resultsDirectory="2m_EA_results"
 resultsPrefix=sys.argv[1]
 
-threads = 12
+threads = 8
 
 flowThreshold=1.0   # Use this to switch off interpolation between cells with
                     # flows below this value
 
-dbTableName = 'test'
+dbTableName = 'results_east_anglia'
 appendDbTable = False
 dbDryThresh = 0.0
 
@@ -69,7 +69,7 @@ sgrid.saveResults(wlGrid,flowX,flowY,xsz,ysz, xll, yll, cellSize,
                    flowThreshold, dtmFileName,
                    resultsDirectory,resultsPrefix+'_max',
                    threads=threads, saveWl = True, method = 2,
-                   dbTableName='test', appendDbTable = False, dbLabel = resultsPrefix, dbDryThresh = 0.0)
+                   dbTableName=dbTableName, appendDbTable = True, dbLabel = resultsPrefix, dbDryThresh = 0.0)
 
 
 if useTempTopoFile:
