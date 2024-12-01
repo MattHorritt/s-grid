@@ -1769,8 +1769,11 @@ def uploadTileToDb(tileGridName, tableName, label, thresh):
 
     os.remove(tmpExtentFileName)
 
-    # Remove dn=0 polygons
-    cur.execute('delete from slr."%s" where dn=0 or dn is NULL'%(tmpName))
+    # Remove dn=0 polygons - don't know why this might fail - but sometimes does
+    try:
+        cur.execute('delete from slr."%s" where dn=0 or dn is NULL'%(tmpName))
+    except:
+        pass
 
     # Copy rows from slr.tmp into output table
     sqlStr = 'insert into slr.%s select \'%s\', wkb_geometry from slr."%s"' % (tableName, label, tmpName)

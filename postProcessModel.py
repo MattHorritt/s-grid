@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import sys
+import time
 #############################################################################
 # Control Panel
-parametersFile="2m_EA_params.pck"
+parametersFile="2m_England_params.pck"
 
 # Topography
 dtmFileName=r"/merlin1/Projects/LTIS SLR/GIS/DTM/All_clip_range.tif"
@@ -13,7 +14,7 @@ noDataValue=None
 noDataReplacement=None
 
 # Folder and first part of filename where CSV outputs from buildModel are stored
-resultsDirectory="2m_EA_results"
+resultsDirectory="2m_England_results"
 resultsPrefix=sys.argv[1]
 
 threads = 8
@@ -21,7 +22,7 @@ threads = 8
 flowThreshold=1.0   # Use this to switch off interpolation between cells with
                     # flows below this value
 
-dbTableName = 'results_east_anglia'
+dbTableName = 'results_england'
 appendDbTable = False
 dbDryThresh = 0.0
 
@@ -61,6 +62,8 @@ wlGrid=fileIO.readCSV(wlFileName,"WL",xsz,ysz,dataType=sgrid.getPrecision())
 flowX,flowY=fileIO.readFlowCsv(flowFileName,xsz,ysz,dataType=sgrid.getPrecision())
 
 print("Resampling and saving max depths/flows to file...")
+
+print("Started at ", time.strftime("%H:%M:%S", time.localtime(time.time())))
 
 maskList=numpy.where((wlGrid-storagePar[:,:,0])<dryThresh)
 wlGrid[maskList]= -9999 # storagePar[:,:,0][maskList]
