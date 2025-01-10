@@ -14,7 +14,7 @@ noDataValue=None
 noDataReplacement=None
 
 # Folder and first part of filename where CSV outputs from buildModel are stored
-resultsDirectory="2m_England_results"
+resultsDirectory="2m_England_results_v2"
 resultsPrefix=sys.argv[1]
 
 threads = 8
@@ -22,7 +22,7 @@ threads = 8
 flowThreshold=1.0   # Use this to switch off interpolation between cells with
                     # flows below this value
 
-dbTableName = 'results_england'
+dbTableName = 'results_england_v2'
 appendDbTable = False
 dbDryThresh = 0.0
 
@@ -71,7 +71,7 @@ wlGrid[maskList]= -9999 # storagePar[:,:,0][maskList]
 sgrid.saveResults(wlGrid,flowX,flowY,xsz,ysz, xll, yll, cellSize,
                    flowThreshold, dtmFileName,
                    resultsDirectory,resultsPrefix+'_max',
-                   threads=threads, saveWl = True, method = 2,
+                   threads=threads, saveWl = False, method = 2,
                    dbTableName=dbTableName, appendDbTable = True, dbLabel = resultsPrefix, dbDryThresh = 0.0)
 
 

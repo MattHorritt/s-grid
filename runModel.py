@@ -13,7 +13,7 @@ print(f"Processing SLR={seaLevelRise} Rp={returnPeriod}")
 
 parametersFile="2m_England_params.pck" # Output from buildModel.py
 
-outputDirectory="2m_England_results" # Folder for results
+outputDirectory="2m_England_results_v2" # Folder for results
 
 slrStr = f"{seaLevelRise:.1f}"
 slrStr = slrStr.replace('.', 'p')
@@ -43,7 +43,7 @@ minTimeStep=30.
 maxTimeStep=3600.
 
 defenceLineStr = r"PG: host=localhost dbname=ltis2025 active_schema=slr user=postgres password=postgres"
-layerName = "aims_ltis_inputs"
+layerName = "can_sgrid_inputs_processed"
 # See comment "Add rainfall" for where to edit rainfall/runoff code
 # See comment "Apply water level boundary" for where to edit water level boundary conditions
 # See comment "Modify flow boundary" for where to edit flow boundary conditions
@@ -271,7 +271,7 @@ if saveMax:
     # volGrid has 0 for dry (but potentially active) cells, need to apply some
     # fettling to fix wlGrid so dry cells are ignored properly in post processing
     wlGrid[storagePar[:,:,0] == -9999] = -9999 # Inactive cells
-    wlGrid[volGrid == 0] = -9999 # Dry cells
+    wlGrid[maxVolGrid == 0] = -9999 # Dry cells
 
     fileIO.saveVectorCSV(maxFlowX,maxFlowY,xll,yll,cellSize,\
         os.path.join(outputDirectory,outputPrefix+"_max_flow.csv"),thresholdVal=1e-3)

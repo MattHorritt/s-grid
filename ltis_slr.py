@@ -28,8 +28,8 @@ def slr_tide_points(slr, returnPeriod, defenceLineStr, xll, yll, xsz, ysz, cellS
         xl = tidePointsRaw[i][0]
         yl = tidePointsRaw[i][1]
 
-        t1 = tidePointsRaw[i][2]["t1"]
-        t200 = tidePointsRaw[i][2][f"t{returnPeriod:.0f}"]
+        mhws = tidePointsRaw[i][2]["mhws"]
+        t_rp = tidePointsRaw[i][2][f"t{returnPeriod:.0f}"]
 
         toeLevel = tidePointsRaw[i][2]["toe_level"]
 
@@ -58,14 +58,14 @@ def slr_tide_points(slr, returnPeriod, defenceLineStr, xll, yll, xsz, ysz, cellS
                 if xi >= 0 and xi < xsz and yi >= 0 and yi < ysz:
                     if (xi, yi) not in xyiList:
                         tidePointsN += 1
-                        tidePoints.append((xi, yi, t1, t200))
+                        tidePoints.append((xi, yi, mhws, t_rp))
                         xyiList.append((xi, yi))
 
                         # Save centres of cells too
                         xc = xll + xi * cellSize + cellSize / 2
                         yc = yll + yi * cellSize + cellSize / 2
 
-                        tidePointsCsvFile.write("%f,%f,%f,%f,%f,%f,%f\n" % (x, y, xc, yc, t1, t200, toeLevel))
+                        tidePointsCsvFile.write("%f,%f,%f,%f,%f,%f,%f\n" % (x, y, xc, yc, mhws, t_rp, toeLevel))
 
     tidePointsCsvFile.close()
 
