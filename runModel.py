@@ -13,7 +13,7 @@ print(f"Processing SLR={seaLevelRise} Rp={returnPeriod}")
 
 parametersFile="2m_England_params.pck" # Output from buildModel.py
 
-outputDirectory="2m_England_results_v2" # Folder for results
+outputDirectory="2m_England_results_v3" # Folder for results
 
 slrStr = f"{seaLevelRise:.1f}"
 slrStr = slrStr.replace('.', 'p')
@@ -44,6 +44,9 @@ maxTimeStep=3600.
 
 defenceLineStr = r"PG: host=localhost dbname=ltis2025 active_schema=slr user=postgres password=postgres"
 layerName = "can_sgrid_inputs_processed"
+coastal_threshold = 0.5
+tidal_threshold = 1.5
+
 # See comment "Add rainfall" for where to edit rainfall/runoff code
 # See comment "Apply water level boundary" for where to edit water level boundary conditions
 # See comment "Modify flow boundary" for where to edit flow boundary conditions
@@ -133,7 +136,8 @@ print("Initial Volume=%e"%volGrid.sum())
 
 # Tide level points for LTIS SLR
 wlPoints = ltis_slr.slr_tide_points(seaLevelRise, returnPeriod, defenceLineStr, xll, yll, xsz, ysz, cellSize,
-                                    outputDirectory, outputPrefix, layerName = layerName)
+                                    outputDirectory, outputPrefix, layerName = layerName,
+                                    coastal_threshold=coastal_threshold, tidal_threshold=tidal_threshold)
 
 # Some dummy arrays because we have no flow points
 flowPointsN=0
